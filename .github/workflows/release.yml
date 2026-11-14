@@ -17,7 +17,7 @@ jobs:
   release:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: true
 
@@ -31,7 +31,7 @@ jobs:
       - name: g++ を PATH に追加する
         run: echo '${{ steps.msys2.outputs.msys2-location }}\ucrt64\bin' >> "$GITHUB_PATH"
 
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
 
       - name: タグと pyproject.toml のバージョンが一致するか確かめる
         run: |
