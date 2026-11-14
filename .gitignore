@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+build/
+dist/
+.aviutl2-pyrrhulina/
+src/aviutl2_pyrrhulina/_bin/
+*.actual.png
+*.diff.png
+.task/

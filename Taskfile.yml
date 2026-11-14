@@ -1,0 +1,48 @@
+version: "3"
+
+vars:
+  CXX: g++
+  PLUGIN: src/aviutl2_pyrrhulina/_bin/aviutl2_pyrrhulina.aux2
+
+tasks:
+  setup:
+    desc: clone した直後に 1 回実行する準備
+    cmds:
+      - git submodule update --init
+      - uv sync
+      - task: build
+
+  build:
+    desc: 検証用プラグインをビルドする
+    sources:
+      - plugin/**/*
+    generates:
+      - "{{.PLUGIN}}"
+    cmds:
+      - cmd: uv run python -c "import pathlib; pathlib.Path('{{.PLUGIN}}').parent.mkdir(parents=True, exist_ok=True)"
+      # -static: AviUtl2 のプロセスに MinGW のランタイム DLL を持ち込まない
+      - "{{.CXX}} -std=c++20 -O2 -Wall -Wextra -shared -static -s -Iplugin/sdk/include -o {{.PLUGIN}} plugin/agent.cpp"
+
+  clean:
+    desc: 検証用の環境と、前回までの証拠ファイルを消す
+    cmds:
+      - uv run python -c "import shutil; shutil.rmtree('.aviutl2-pyrrhulina', ignore_errors=True)"
+
+  check:
+    desc: 静的検査
+    cmds:
+      - uv run ruff format --check
+      - uv run ruff check
+      - uv run ty check
+
+  test:
+    desc: AviUtl2 を起動しないテスト
+    deps: [clean]
+    cmds:
+      - uv run pytest -m "not aviutl2"
+
+  test:e2e:
+    desc: AviUtl2 を起動するテスト
+    deps: [build, clean]
+    cmds:
+      - uv run pytest -m aviutl2

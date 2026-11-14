@@ -1,0 +1,41 @@
+[project]
+name = "aviutl2-pyrrhulina"
+version = "0.1.0"
+description = "AviUtl2 を実際に動かして、スクリプトの描画結果とログを pytest から検証する"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = [
+    "pillow>=11",
+    "pytest>=8",
+]
+
+[project.urls]
+Repository = "https://github.com/osakanamaki/aviutl2-pyrrhulina"
+
+[project.entry-points.pytest11]
+aviutl2_pyrrhulina = "aviutl2_pyrrhulina.pytest_plugin"
+
+[dependency-groups]
+dev = [
+    "go-task-bin>=3.40",
+    "ruff>=0.8",
+    "ty>=0.0.1a1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+# プラグインの実行ファイルは git 管理外なので、明示しないと配布物に入らない。
+artifacts = ["src/aviutl2_pyrrhulina/_bin/*.aux2"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "PTH"]

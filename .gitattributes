@@ -1,0 +1,3 @@
+*.png binary
+*.obj2 text eol=crlf
+*.anm2 text eol=crlf

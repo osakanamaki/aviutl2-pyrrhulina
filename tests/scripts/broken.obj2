@@ -1,0 +1,3 @@
+--label:pyrrhulina
+local nothing = nil
+nothing.value = 1

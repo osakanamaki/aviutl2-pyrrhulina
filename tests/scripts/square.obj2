@@ -1,0 +1,4 @@
+--label:pyrrhulina
+--track@size:サイズ,0,200,50,1
+print("size=" .. tostring(size))
+obj.load("figure", "四角形", 0x288cd2, size)
