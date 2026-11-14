@@ -1,0 +1,2 @@
+--label:pyrrhulina
+obj.load("image", "C:/no/such/image.png")

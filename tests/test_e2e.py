@@ -40,3 +40,28 @@ def test_endless_script_reports_the_step_that_timed_out(aviutl2: AviUtl2) -> Non
 
     assert "render\t0\t" in str(error.value) and "rendering timeout" in str(error.value)
     assert "skipped because the time limit was reached" in str(error.value)
+
+
+def test_track_value_follows_midpoints(aviutl2: AviUtl2) -> None:
+    square = Effect("square", {"サイズ": "20.00,100.00,60.00,直線移動,0"})
+    project = Project(320, 240, [TimelineObject(0, 0, 20, [square, Effect("標準描画")], midpoints=[10])])
+
+    result = aviutl2.render(project, [0, 5, 10, 15, 20])
+
+    # 四角形は画面（320×240）の中央に描かれるので、描画範囲から大きさが分かる。
+    expected_sizes = {0: 20, 5: 60, 10: 100, 15: 80, 20: 60}
+    for frame, size in expected_sizes.items():
+        left, top = 160 - size // 2, 120 - size // 2
+        assert result.images[frame].getbbox() == (left, top, left + size, top + size), f"frame {frame}"
+
+
+def test_known_log_error_can_be_ignored(aviutl2: AviUtl2) -> None:
+    with pytest.raises(AviUtl2Error, match="canLoadFile"):
+        aviutl2.render(_project("missing_image"), [0])
+
+    aviutl2.render(_project("missing_image"), [0], ignore_log_errors=["ImageService::canLoadFile"])
+
+
+def test_ignoring_one_error_does_not_hide_others(aviutl2: AviUtl2) -> None:
+    with pytest.raises(AviUtl2Error, match="script exception"):
+        aviutl2.render(_project("broken"), [0], ignore_log_errors=["ImageService::canLoadFile"])

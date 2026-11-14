@@ -57,12 +57,26 @@ class AviUtl2:
     update_baselines: bool
 
     def render(
-        self, project: Project, frames: Sequence[int], *, timeout: float = 60, allow_log_errors: bool = False
+        self,
+        project: Project,
+        frames: Sequence[int],
+        *,
+        timeout: float = 60,
+        allow_log_errors: bool = False,
+        ignore_log_errors: Sequence[str] = (),
     ) -> RenderResult:
         self.evidence_dir.mkdir(parents=True, exist_ok=True)
         project_path = self.evidence_dir / "project.aup2"
         project.write(project_path)
-        return render(self.environment, project_path, frames, self.evidence_dir, timeout, allow_log_errors)
+        return render(
+            self.environment,
+            project_path,
+            frames,
+            self.evidence_dir,
+            timeout,
+            allow_log_errors,
+            ignore_log_errors,
+        )
 
     def assert_matches(self, actual: Image.Image, baseline_path: Path, *, tolerance: int = 0) -> None:
         assert_images_match(
