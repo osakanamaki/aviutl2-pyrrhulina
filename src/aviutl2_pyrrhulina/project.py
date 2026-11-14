@@ -22,6 +22,17 @@ class TimelineObject:
     start: int
     end: int
     effects: Sequence[Effect]
+    # 中間点のフレーム番号。指定したときは、移動するトラックバーの値を
+    # 「開始, 各中間点, 終了」の順に並べる（例: 中間点 1 つなら "0.00,100.00,200.00,直線移動,0"）。
+    midpoints: Sequence[int] = ()
+
+    def __post_init__(self) -> None:
+        if self.frames != sorted(set(self.frames)):
+            raise ValueError(f"開始 < 中間点 < 終了 の順になっていません: {self.frames}")
+
+    @property
+    def frames(self) -> list[int]:
+        return [self.start, *self.midpoints, self.end]
 
 
 @dataclass(frozen=True)
@@ -52,7 +63,7 @@ class Project:
             lines += [
                 f"[{object_index}]",
                 f"layer={timeline_object.layer}",
-                f"frame={timeline_object.start},{timeline_object.end}",
+                "frame=" + ",".join(map(str, timeline_object.frames)),
             ]
             for effect_index, effect in enumerate(timeline_object.effects):
                 lines += [f"[{object_index}.{effect_index}]", f"effect.name={effect.name}"]

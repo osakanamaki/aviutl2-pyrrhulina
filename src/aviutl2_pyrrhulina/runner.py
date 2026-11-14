@@ -47,11 +47,14 @@ def render(
     work_dir: Path,
     timeout: float = 60,
     allow_log_errors: bool = False,
+    ignore_log_errors: Sequence[str] = (),
 ) -> RenderResult:
     """project_path を開いて frames を描画する。画像とログは work_dir にも残す。
 
     スクリプトがエラーになっても AviUtl2 は止まらず、何も描画されないだけになる。
-    見落とさないよう、ログにエラーがあれば例外にする（allow_log_errors=True で無効）。
+    見落とさないよう、ログにエラーがあれば例外にする。
+    起きると分かっているエラーは、その行に含まれる文字列を ignore_log_errors に渡して除外する。
+    allow_log_errors=True なら、どのエラーでも例外にしない。
     """
     # AviUtl2 側は作業フォルダが違うので、渡すパスはすべて絶対パスにする。
     work_dir = work_dir.resolve()
@@ -112,8 +115,11 @@ def render(
         images[frame].save(raw_path.with_suffix(".png"))
         raw_path.unlink()
     result = RenderResult(images, log)
-    if result.log_errors and not allow_log_errors:
-        raise AviUtl2Error("\n".join(["ログにエラーがあります:", *result.log_errors, f"ログ: {log_path}"]))
+    unexpected = [
+        line for line in result.log_errors if not any(ignored in line for ignored in ignore_log_errors)
+    ]
+    if unexpected and not allow_log_errors:
+        raise AviUtl2Error("\n".join(["ログにエラーがあります:", *unexpected, f"ログ: {log_path}"]))
     return result
 
 
