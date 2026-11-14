@@ -1,3 +1,5 @@
+# 本ツール（aviutl2-pyrrhulina）を開発するためのタスク。
+# 利用者は自分のリポジトリで pytest を直接実行するため、このタスクは使用しない。
 version: "3"
 
 vars:
@@ -6,14 +8,13 @@ vars:
 
 tasks:
   setup:
-    desc: clone した直後に 1 回実行する準備
+    desc: 開発するための準備（clone後1回）
     cmds:
       - git submodule update --init
       - uv sync
-      - task: build
 
   build:
-    desc: 検証用プラグインをビルドする
+    desc: 検証用プラグインをビルドする（g++ が必要）
     sources:
       - plugin/**/*
     generates:
@@ -24,7 +25,7 @@ tasks:
       - "{{.CXX}} -std=c++20 -O2 -Wall -Wextra -shared -static -s -Iplugin/sdk/include -o {{.PLUGIN}} plugin/agent.cpp"
 
   clean:
-    desc: 検証用の環境と、前回までの証拠ファイルを消す
+    desc: 検証用環境と前回までの証拠ファイルを消す
     cmds:
       - uv run python -c "import shutil; shutil.rmtree('.aviutl2-pyrrhulina', ignore_errors=True)"
 
@@ -36,13 +37,13 @@ tasks:
       - uv run ty check
 
   test:
-    desc: AviUtl2 を起動しないテスト
+    desc: AviUtl2を起動しないテスト
     deps: [clean]
     cmds:
       - uv run pytest -m "not aviutl2"
 
   test:e2e:
-    desc: AviUtl2 を起動するテスト
+    desc: AviUtl2を起動するテスト
     deps: [build, clean]
     cmds:
       - uv run pytest -m aviutl2

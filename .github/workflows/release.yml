@@ -1,0 +1,70 @@
+# v から始まるタグ（例: v0.1.0）を push すると、検証用プラグインをビルドして
+# wheel と .aux2 を GitHub Releases に置く。
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: g++（MinGW-w64）を入れる
+        id: msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          install: mingw-w64-ucrt-x86_64-gcc
+
+      - name: g++ を PATH に追加する
+        run: echo '${{ steps.msys2.outputs.msys2-location }}\ucrt64\bin' >> "$GITHUB_PATH"
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: タグと pyproject.toml のバージョンが一致するか確かめる
+        run: |
+          version=$(uv run --no-project python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "タグ $GITHUB_REF_NAME と pyproject.toml のバージョン $version が一致しません" >&2
+            exit 1
+          fi
+
+      - run: uv sync
+
+      - name: プラグインをビルドする
+        run: uv run task build
+
+      # AviUtl2 は入っていないので、起動しないテストだけ実行する。
+      - run: uv run task check
+      - run: uv run task test
+
+      - name: wheel を作る
+        run: uv build
+
+      - name: wheel にプラグインが入っているか確かめる
+        run: |
+          uv run --no-project python - <<'EOF'
+          import pathlib, zipfile
+          wheel = next(pathlib.Path("dist").glob("*.whl"))
+          names = zipfile.ZipFile(wheel).namelist()
+          assert "aviutl2_pyrrhulina/_bin/aviutl2_pyrrhulina.aux2" in names, names
+          EOF
+
+      - name: Releases に置く
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* src/aviutl2_pyrrhulina/_bin/aviutl2_pyrrhulina.aux2 \
+            --title "$GITHUB_REF_NAME" --generate-notes
