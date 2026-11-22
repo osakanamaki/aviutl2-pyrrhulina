@@ -6,7 +6,7 @@
 """
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 
@@ -75,3 +75,40 @@ class Project:
 
     def write(self, path: Path) -> None:
         path.write_text(self.to_text(), encoding="utf-8", newline="\r\n")
+
+
+# 検証用プラグインが登録する、プレビューの描画結果を受け取るためのフィルタ。
+PREVIEW_CAPTURE_EFFECT = "pyrrhulina capture"
+
+
+@dataclass(frozen=True)
+class PreviewTarget:
+    """プレビューとして描画するときに、検証用プラグインへ渡す情報。"""
+
+    # オブジェクト設定ウィンドウで選択するオブジェクトの位置（レイヤー番号とフレーム番号）。
+    selected_layer: int
+    selected_frame: int
+    # 目印のオブジェクトのレイヤー番号。目印より上のレイヤーが重なったところで画像を受け取る。
+    marker_layer: int
+
+
+def add_preview_capture(project: Project, selected: TimelineObject) -> tuple[Project, PreviewTarget]:
+    """プレビューの描画結果を受け取るためのオブジェクトを、project の一番下のレイヤーに足す。
+
+    プレビューの画像を返す API が無いので、検証用プラグインのフィルタで受け取る。
+    しくみは plugin/agent.cpp の冒頭の「プレビュー」を参照。
+    - 目印: 一番下のレイヤーの次に置く小さな図形。受け取る画像には写らない。
+    - フィルタオブジェクト: 目印の次に置く。上のレイヤーのオブジェクトごとにかかる。
+    どちらも、シーンの最後より 1 フレーム長くする。同じフレームを続けて描かせるとき、
+    検証用プラグインは隣のフレームを挟むので、隣のフレームが必ずあるようにするため。
+    """
+    if selected not in project.objects:
+        raise ValueError("selected には、project.objects に含まれるオブジェクトを指定してください")
+    marker_layer = max(timeline_object.layer for timeline_object in project.objects) + 1
+    last_frame = max(timeline_object.end for timeline_object in project.objects) + 1
+    marker = TimelineObject(
+        marker_layer, 0, last_frame, [Effect("図形", {"サイズ": "1"}), Effect("標準描画")]
+    )
+    capture = TimelineObject(marker_layer + 1, 0, last_frame, [Effect(PREVIEW_CAPTURE_EFFECT)])
+    captured_project = replace(project, objects=[*project.objects, marker, capture])
+    return captured_project, PreviewTarget(selected.layer, selected.start, marker_layer)

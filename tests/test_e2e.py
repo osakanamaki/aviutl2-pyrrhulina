@@ -13,6 +13,7 @@ from aviutl2_pyrrhulina import (
     Package,
     Project,
     TimelineObject,
+    compare_images,
     create_environment,
     make_thumbnail,
     render,
@@ -218,3 +219,48 @@ def test_package_is_installed_as_install_steps_say(tmp_path: Path, pytestconfig:
 
     assert result.images[0].getbbox() == (110, 70, 210, 170)
     assert [file.catalog_path for file in environment.installed_files] == ["{scriptsDir}/pkg/pkg-square.obj2"]
+
+
+def test_selected_object_is_rendered_as_preview_with_gui(aviutl2: AviUtl2) -> None:
+    guide = TimelineObject(0, 0, 9, [Effect("gui"), Effect("標準描画")])
+    project = Project(320, 240, [guide])
+
+    preview = aviutl2.render(project, [0, 5], selected=guide)
+    output = aviutl2.render(project, [5])
+
+    # 選択したオブジェクトは、プレビューでだけ gui が true（赤）になる。
+    # 0 はプロジェクトを開いた直後の表示フレームと同じなので、隣のフレームを挟んで描き直させている。
+    assert preview.images[0].getpixel((160, 120)) == (255, 0, 0, 255)
+    assert preview.images[5].getpixel((160, 120)) == (255, 0, 0, 255)
+    assert output.images[5].getpixel((160, 120)) == (0, 0, 255, 255)
+    # 受け取り用の目印は写らない。
+    assert preview.images[5].getbbox() == (110, 70, 210, 170)
+    assert preview.log_lines("[SCRIPT] [gui] gui=true")
+
+
+def test_preview_matches_output_including_translucent_pixels(aviutl2: AviUtl2, tmp_path: Path) -> None:
+    square = TimelineObject(
+        0, 0, 9, [Effect("square", {"サイズ": "100.00"}), Effect("標準描画", {"透明度": "50.00"})]
+    )
+    corner = TimelineObject(1, 0, 9, [Effect("corner"), Effect("標準描画")])
+    project = Project(320, 240, [square, corner])
+
+    preview = aviutl2.render(project, [3], selected=square)
+    output = aviutl2.render(project, [3])
+
+    # gui を使わないスクリプトなら、プレビューと出力は同じ画像になる。
+    # プレビューは不透明度を掛けた半精度浮動小数から割り戻すので、半透明の部分は丸めの差を許す。
+    assert preview.images[3].getpixel((160, 120)) == output.images[3].getpixel((160, 120))
+    output_path = tmp_path / "output.png"
+    output.images[3].save(output_path)
+    comparison = compare_images(preview.images[3], output_path, tmp_path / "comparison", tolerance=1)
+    assert comparison.passed, comparison.describe()
+
+
+def test_one_frame_object_can_be_rendered_as_preview(aviutl2: AviUtl2) -> None:
+    # シーンが 1 フレームでも、受け取り用のオブジェクトが 1 フレーム長いので、隣のフレームを挟める。
+    guide = TimelineObject(0, 0, 0, [Effect("gui"), Effect("標準描画")])
+
+    result = aviutl2.render(Project(320, 240, [guide]), [0], selected=guide)
+
+    assert result.images[0].getpixel((160, 120)) == (255, 0, 0, 255)

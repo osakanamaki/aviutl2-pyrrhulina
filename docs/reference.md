@@ -36,7 +36,7 @@
 
 ## `aviutl2` fixture のメソッド
 
-### `render(project, frames, *, timeout=60, allow_log_errors=False, ignore_log_errors=())`
+### `render(project, frames, *, timeout=60, allow_log_errors=False, ignore_log_errors=(), selected=None)`
 
 `project` をAviUtl2で開き、`frames` の各フレームを描画して `RenderResult` を返します。
 
@@ -47,6 +47,7 @@
 | `timeout` | 制限時間（秒）。超えるとAviUtl2を止めて `AviUtl2Error` |
 | `allow_log_errors` | `True` なら、ログにエラーがあっても例外にしない |
 | `ignore_log_errors` | 例外にしないエラー行に含まれる文字列の並び |
+| `selected` | 選択するオブジェクト（`TimelineObject`）。渡すとプレビューとして描画し、そのオブジェクトの `obj.getoption("gui")` が `true` になる（[説明](testing.md#選択中のオブジェクトとして描画するobjgetoptiongui)）。`project.objects` に無いと `ValueError` |
 
 ### `assert_snapshot(result, *, name="", tolerance=0)`
 
@@ -105,6 +106,16 @@ result = render(environment, work_dir / "project.aup2", [0, 9], work_dir)
 
 基準画像との比較は `compare_images`（比較結果を返す）と `assert_images_match`（一致しないと例外）で行えます。
 
+選択中のオブジェクトとして描画するときは、`add_preview_capture` で受け取り用のオブジェクトを足し、返ってきた `PreviewTarget` を `render` の `preview` に渡します。
+
+```python
+from aviutl2_pyrrhulina import add_preview_capture
+
+captured, target = add_preview_capture(project, guide)  # guide は project.objects の 1 つ
+captured.write(work_dir / "project.aup2")
+result = render(environment, work_dir / "project.aup2", [0], work_dir, preview=target)
+```
+
 ## 作業フォルダ
 
 ピルリナは、pytestを実行したフォルダ（rootdir）の `.aviutl2-pyrrhulina/` を作業フォルダにします。
@@ -151,6 +162,26 @@ AviUtl2が、ピルリナの最低バージョン（README の「前提」）よ
 ### 「rendering_scene_video failed」で失敗する
 
 描画するフレーム番号が、プロジェクトの範囲（オブジェクトの終了フレーム）を超えている可能性があります。
+
+### 「パスが Windows の上限（259 文字）を超えるため」と表示される
+
+証跡のフォルダ（`.aviutl2-pyrrhulina/evidence/<テスト名>/`）の下に作るファイルのパスが、Windowsの上限を超えています。AviUtl2と検証用プラグインはそれより長いパスに書き込めないので、描画を始める前に失敗させています。
+
+- テスト名や parametrize の id を短くします。日本語の id は、pytestが `_u30b9` のような形に置き換えるため、1文字が6文字になります。英数字の id にすると短くなります。
+- リポジトリを浅いフォルダに置いて実行します（git worktree の深いフォルダなどで起きやすくなります）。
+
+### 「AviUtl2 が結果を書かずに終了しました」と表示される
+
+AviUtl2が落ちたか、検証用プラグインが結果ファイルを書けませんでした。書けなかったときは、エラーに `cannot write result file` などの行が続き、理由が分かります。
+
+### `selected` を渡すと「preview timeout」で失敗する
+
+プレビューの描画を待ちきれませんでした。次の可能性があります。
+
+- 描画するフレーム番号がプロジェクトの範囲を超えている。表示フレームは範囲内に丸められるので、指定したフレームが描かれず、時間切れになります。
+- 描画が重い。`timeout` を延ばします。
+
+「object not found」のときは、`selected` のオブジェクトの位置（レイヤーと開始フレーム）にオブジェクトがありません。「cannot capture preview」のときは、プレビューの画像を読み戻せませんでした。AviUtl2のログ（証跡の `aviutl2.log`）に `[pyrrhulina]` で始まる理由が出ていないか確かめます。
 
 ### 「検証用の環境を消せませんでした」
 

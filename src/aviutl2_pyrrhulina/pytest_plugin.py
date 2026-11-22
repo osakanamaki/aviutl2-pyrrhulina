@@ -23,8 +23,8 @@ from aviutl2_pyrrhulina.compare import ImageComparison, ImageMismatch, compare_i
 from aviutl2_pyrrhulina.environment import DEFAULT_APP_DIR, Environment, create_environment
 from aviutl2_pyrrhulina.evidence import EvidenceRecord, write_frames_animation, write_report
 from aviutl2_pyrrhulina.package import InstalledFile, Package
-from aviutl2_pyrrhulina.project import Project
-from aviutl2_pyrrhulina.runner import RenderResult, render
+from aviutl2_pyrrhulina.project import Project, TimelineObject, add_preview_capture
+from aviutl2_pyrrhulina.runner import RenderResult, check_path_lengths, render, work_paths
 
 _WORK_DIR_NAME = ".aviutl2-pyrrhulina"
 _REPORT_NAME = "index.html"
@@ -115,9 +115,22 @@ class AviUtl2:
         timeout: float = 60,
         allow_log_errors: bool = False,
         ignore_log_errors: Sequence[str] = (),
+        selected: TimelineObject | None = None,
     ) -> RenderResult:
-        self.evidence_dir.mkdir(parents=True, exist_ok=True)
+        """project を開いて frames を描画する。
+
+        selected を渡すと、そのオブジェクトをオブジェクト設定ウィンドウで選択し、プレビューとして描画する。
+        selected のオブジェクトでは obj.getoption("gui") が true になる（渡さなければ false）。
+        """
         project_path = self.evidence_dir / "project.aup2"
+        # 証跡のフォルダはテスト名から作るので、長いテスト名だとパスが Windows の上限を超える。
+        # フォルダを作る前に確かめ、超えるなら理由の分かるエラーにする。
+        check_path_lengths([project_path.resolve(), *work_paths(self.evidence_dir.resolve(), frames)])
+        self.evidence_dir.mkdir(parents=True, exist_ok=True)
+        preview = None
+        if selected is not None:
+            # 証跡のプロジェクトも、実際に開いたもの（受け取り用のオブジェクトを足したもの）を残す。
+            project, preview = add_preview_capture(project, selected)
         project.write(project_path)
         # 1 つのテストで複数回描画したときは、最後の描画結果だけを一覧に載せる。
         self.record.frames = {}
@@ -130,6 +143,7 @@ class AviUtl2:
             timeout,
             allow_log_errors,
             ignore_log_errors,
+            preview,
         )
         self.record.frames = dict(result.image_paths)
         if len(result.images) >= 2:
