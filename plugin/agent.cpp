@@ -481,11 +481,20 @@ DWORD WINAPI worker(void*) {
 	// 書きかけの結果を読まれないよう、別名で書いてから改名する。
 	std::wstring result_path = g_job_path + L".result";
 	std::wstring temp_path = result_path + L".tmp";
+	bool written = false;
 	{
 		std::ofstream out(temp_path.c_str(), std::ios::binary);
 		for (const auto& result : results) out << result << "\n";
+		out.flush();
+		written = out.good();
 	}
-	MoveFileExW(temp_path.c_str(), result_path.c_str(), MOVEFILE_REPLACE_EXISTING);
+	// 書けないと、Python 側には「結果を書かずに終了した」としか分からない。原因の手がかりをログに残す。
+	// パスが長すぎる（MAX_PATH を超える）ときもここに来る。
+	if (!written) {
+		log_info(L"cannot write result file (path length " + std::to_wstring(temp_path.size()) + L"): " + temp_path);
+	} else if (!MoveFileExW(temp_path.c_str(), result_path.c_str(), MOVEFILE_REPLACE_EXISTING)) {
+		log_info(L"cannot rename result file (error " + std::to_wstring(GetLastError()) + L"): " + result_path);
+	}
 
 	PostMessageW(g_edit->get_host_app_window(), WM_CLOSE, 0, 0);
 	return 0;

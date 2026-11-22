@@ -24,7 +24,7 @@ from aviutl2_pyrrhulina.environment import DEFAULT_APP_DIR, Environment, create_
 from aviutl2_pyrrhulina.evidence import EvidenceRecord, write_frames_animation, write_report
 from aviutl2_pyrrhulina.package import InstalledFile, Package
 from aviutl2_pyrrhulina.project import Project, TimelineObject, add_preview_capture
-from aviutl2_pyrrhulina.runner import RenderResult, render
+from aviutl2_pyrrhulina.runner import RenderResult, check_path_lengths, render, work_paths
 
 _WORK_DIR_NAME = ".aviutl2-pyrrhulina"
 _REPORT_NAME = "index.html"
@@ -122,8 +122,11 @@ class AviUtl2:
         selected を渡すと、そのオブジェクトをオブジェクト設定ウィンドウで選択し、プレビューとして描画する。
         selected のオブジェクトでは obj.getoption("gui") が true になる（渡さなければ false）。
         """
-        self.evidence_dir.mkdir(parents=True, exist_ok=True)
         project_path = self.evidence_dir / "project.aup2"
+        # 証跡のフォルダはテスト名から作るので、長いテスト名だとパスが Windows の上限を超える。
+        # フォルダを作る前に確かめ、超えるなら理由の分かるエラーにする。
+        check_path_lengths([project_path.resolve(), *work_paths(self.evidence_dir.resolve(), frames)])
+        self.evidence_dir.mkdir(parents=True, exist_ok=True)
         preview = None
         if selected is not None:
             # 証跡のプロジェクトも、実際に開いたもの（受け取り用のオブジェクトを足したもの）を残す。

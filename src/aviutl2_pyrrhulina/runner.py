@@ -3,7 +3,7 @@
 import os
 import struct
 import subprocess
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -22,10 +22,45 @@ _PLUGIN_MARGIN_SECONDS = 5
 MINIMUM_AVIUTL2_VERSION = "2.1.17"
 # 本体が RequiredVersion を満たさないとき、AviUtl2 がログに出す文言。
 _VERSION_NOT_SUPPORTED = "version not supported"
+# 検証用プラグインが結果ファイルを書けなかったとき、ログに出す文言（cannot write / cannot rename）。
+_RESULT_NOT_WRITTEN = "result file ("
+
+
+# Windows のパスの長さの上限（MAX_PATH の 260 から、終端の NUL を除いたもの）。
+# AviUtl2 も検証用プラグインも、これより長いパスのファイルを書けない。
+MAX_PATH_LENGTH = 259
 
 
 class AviUtl2Error(Exception):
     pass
+
+
+def work_paths(work_dir: Path, frames: Sequence[int]) -> list[Path]:
+    """render が work_dir の下に作るファイルのうち、AviUtl2 側（検証用プラグイン）が書くもの。
+
+    結果ファイルは「job.txt.result.tmp」に書いてから改名するので、これが一番長い。
+    """
+    job_path = work_dir / "job.txt"
+    return [
+        job_path,
+        Path(f"{job_path}.result"),
+        Path(f"{job_path}.result.tmp"),
+        *(work_dir / f"frame_{frame:05d}.rgba" for frame in frames),
+    ]
+
+
+def check_path_lengths(paths: Iterable[Path]) -> None:
+    """paths に Windows の上限より長いものがあれば、理由が分かる AviUtl2Error にする。"""
+    too_long = [path for path in paths if len(str(path)) > MAX_PATH_LENGTH]
+    if not too_long:
+        return
+    longest = max(too_long, key=lambda path: len(str(path)))
+    raise AviUtl2Error(
+        f"パスが Windows の上限（{MAX_PATH_LENGTH} 文字）を超えるため、AviUtl2 が書き込めません"
+        f"（{len(str(longest))} 文字）: {longest}\n"
+        "テスト名や parametrize の id を短くするか、浅いフォルダで実行してください。"
+        "日本語の id は、pytest が「_u30b9」のような形に置き換えるため、1 文字が 6 文字になります。"
+    )
 
 
 @dataclass(frozen=True)
@@ -71,11 +106,13 @@ def render(
     """
     # AviUtl2 側は作業フォルダが違うので、渡すパスはすべて絶対パスにする。
     work_dir = work_dir.resolve()
-    work_dir.mkdir(parents=True, exist_ok=True)
     project_path = project_path.resolve()
     raw_paths = {frame: work_dir / f"frame_{frame:05d}.rgba" for frame in frames}
     job_path = work_dir / "job.txt"
     result_path = Path(f"{job_path}.result")
+    # 長すぎると、AviUtl2 が結果を書けずに終了し、原因の分からないエラーになる。起動する前に確かめる。
+    check_path_lengths([project_path, *work_paths(work_dir, frames)])
+    work_dir.mkdir(parents=True, exist_ok=True)
     result_path.unlink(missing_ok=True)
     plugin_timeout = max(timeout - _PLUGIN_MARGIN_SECONDS, timeout / 2)
     job_lines = [
@@ -118,6 +155,8 @@ def render(
         errors = _result_errors(job_lines, result_path.read_text(encoding="utf-8"))
     elif not timed_out:
         errors = ["AviUtl2 が結果を書かずに終了しました（異常終了の可能性）"]
+        # 結果ファイルを書けなかったときは、検証用プラグインがその理由をログに残している。
+        errors += [line for line in log.splitlines() if _RESULT_NOT_WRITTEN in line]
     if timed_out:
         errors.append(f"AviUtl2 が {timeout} 秒以内に終了しなかったので、強制終了しました")
     if _VERSION_NOT_SUPPORTED in log:
