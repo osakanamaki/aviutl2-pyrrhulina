@@ -96,16 +96,14 @@ def render(
     # その場合も、どの手順で止まったかを伝えられるよう、結果を先に読む。
     errors = []
     if result_path.exists():
-        results = [line.split("\t") for line in result_path.read_text(encoding="utf-8").splitlines()]
-        errors = [
-            f"{command}: {' '.join(result[1:])}"
-            for command, result in zip(job_lines, results, strict=True)
-            if result[0] != "ok"
-        ]
+        errors = _result_errors(job_lines, result_path.read_text(encoding="utf-8"))
     elif not timed_out:
         errors = ["AviUtl2 が結果を書かずに終了しました（異常終了の可能性）"]
     if timed_out:
         errors.append(f"AviUtl2 が {timeout} 秒以内に終了しなかったので、強制終了しました")
+    if not new_logs:
+        # ログが無いと、ログのエラー検出が何も見つけられずに素通りしてしまう。
+        errors.append(f"AviUtl2 のログファイルが新しく作られませんでした: {environment.log_dir}")
     if errors:
         raise AviUtl2Error("\n".join([*errors, f"ログ: {log_path}"]))
 
@@ -121,6 +119,20 @@ def render(
     if unexpected and not allow_log_errors:
         raise AviUtl2Error("\n".join(["ログにエラーがあります:", *unexpected, f"ログ: {log_path}"]))
     return result
+
+
+def _result_errors(job_lines: Sequence[str], result_text: str) -> list[str]:
+    """プラグインの結果ファイル（命令と同じ順に 1 行ずつ）から、失敗した命令を取り出す。"""
+    results = [line.split("\t") for line in result_text.splitlines()]
+    errors = [
+        f"{command}: {' '.join(result[1:])}"
+        for command, result in zip(job_lines, results, strict=False)
+        if result[0] != "ok"
+    ]
+    if len(results) != len(job_lines):
+        # プラグインがジョブファイルを読めなかったときなど。
+        errors.append(f"プラグインの結果が {len(results)} 行で、命令の {len(job_lines)} 行と合いません")
+    return errors
 
 
 def _read_raw_image(path: Path) -> Image.Image:

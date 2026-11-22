@@ -43,3 +43,19 @@ def test_midpoints_are_written_between_start_and_end() -> None:
 def test_midpoints_out_of_order_are_rejected(midpoints: list[int]) -> None:
     with pytest.raises(ValueError, match="中間点"):
         TimelineObject(0, 0, 20, [Effect("図形")], midpoints=midpoints)
+
+
+def test_one_frame_object_is_allowed() -> None:
+    project = Project(320, 240, [TimelineObject(0, 5, 5, [Effect("図形")])])
+
+    assert "frame=5,5" in project.to_text().splitlines()
+
+
+def test_end_before_start_is_rejected() -> None:
+    with pytest.raises(ValueError, match="開始が終了より後"):
+        TimelineObject(0, 6, 5, [Effect("図形")])
+
+
+def test_midpoint_in_one_frame_object_is_rejected() -> None:
+    with pytest.raises(ValueError, match="中間点"):
+        TimelineObject(0, 5, 5, [Effect("図形")], midpoints=[5])
