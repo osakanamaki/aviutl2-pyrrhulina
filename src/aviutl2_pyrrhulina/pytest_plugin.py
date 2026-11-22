@@ -12,18 +12,18 @@ import re
 import shutil
 from collections.abc import Generator, Mapping, Sequence
 from dataclasses import dataclass, field
+from fractions import Fraction
 from pathlib import Path
 
 import pytest
 from PIL import Image
 
 from aviutl2_pyrrhulina.compare import ImageComparison, ImageMismatch, compare_images
-from aviutl2_pyrrhulina.environment import Environment, create_environment
-from aviutl2_pyrrhulina.evidence import EvidenceRecord, write_report
+from aviutl2_pyrrhulina.environment import DEFAULT_APP_DIR, Environment, create_environment
+from aviutl2_pyrrhulina.evidence import EvidenceRecord, write_frames_animation, write_report
 from aviutl2_pyrrhulina.project import Project
 from aviutl2_pyrrhulina.runner import RenderResult, render
 
-_DEFAULT_APP_DIR = r"C:\Program Files\AviUtl2"
 _WORK_DIR_NAME = ".aviutl2-pyrrhulina"
 _REPORT_NAME = "index.html"
 
@@ -36,7 +36,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     group = parser.getgroup("aviutl2")
     group.addoption(
         "--aviutl2-app",
-        default=os.environ.get("AVIUTL2_APP", _DEFAULT_APP_DIR),
+        default=os.environ.get("AVIUTL2_APP", DEFAULT_APP_DIR),
         help="複製元の AviUtl2 のフォルダ（既定: 環境変数 AVIUTL2_APP、無ければ %(default)s）",
     )
     group.addoption(
@@ -123,6 +123,11 @@ class AviUtl2:
             ignore_log_errors,
         )
         self.record.frames = dict(result.image_paths)
+        if len(result.images) >= 2:
+            # 動きのある絵柄は、静止画を並べるより動かしたほうが確かめやすい。
+            self.record.animation_path = write_frames_animation(
+                result.images, Fraction(project.rate, project.scale), self.evidence_dir / "frames.webp"
+            )
         return result
 
     def assert_matches(

@@ -13,6 +13,9 @@ dependencies = [
 [project.urls]
 Repository = "https://github.com/osakanamaki/aviutl2-pyrrhulina"
 
+[project.scripts]
+aviutl2-pyrrhulina-thumbnail = "aviutl2_pyrrhulina.thumbnail:main"
+
 [project.entry-points.pytest11]
 aviutl2_pyrrhulina = "aviutl2_pyrrhulina.pytest_plugin"
 

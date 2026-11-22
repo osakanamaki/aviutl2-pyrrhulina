@@ -6,12 +6,38 @@
 
 import html
 import os
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from fractions import Fraction
 from pathlib import Path
 from urllib.parse import quote
 
+from PIL import Image
+
 from aviutl2_pyrrhulina.compare import ImageComparison
+from aviutl2_pyrrhulina.thumbnail import save_animation, shrink
+
+# 一覧で動きを見るためのアニメーションの大きさ（長い辺）。描画結果が大きくても一覧を軽く保つため。
+ANIMATION_MAX_SIZE = 320
+# 1 フレームの表示時間の範囲。フレームの間隔が空いていても、止まって見えたり速すぎたりしないようにする。
+_MIN_FRAME_MS = 20
+_MAX_FRAME_MS = 1000
+
+
+def write_frames_animation(images: Mapping[int, Image.Image], project_fps: Fraction, path: Path) -> Path:
+    """描画したフレームを、フレーム番号の間隔どおりの時間で再生するアニメーション WebP にする。
+
+    例えば 0, 5, 10 フレームを描画したときは、5 フレーム分ずつ表示する。
+    最後のフレームは、その前のフレームと同じ時間だけ表示する。
+    """
+    frames = sorted(images)
+    if len(frames) < 2:
+        raise ValueError("アニメーションには 2 フレーム以上が必要です")
+    frame_ms = 1000 / project_fps
+    durations = [(after - before) * frame_ms for before, after in zip(frames, frames[1:], strict=False)]
+    durations.append(durations[-1])
+    clamped = [round(min(max(duration, _MIN_FRAME_MS), _MAX_FRAME_MS)) for duration in durations]
+    return save_animation([shrink(images[frame], ANIMATION_MAX_SIZE) for frame in frames], path, clamped)
 
 
 @dataclass

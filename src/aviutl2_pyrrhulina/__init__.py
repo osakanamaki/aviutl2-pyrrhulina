@@ -9,6 +9,7 @@ from aviutl2_pyrrhulina.environment import Environment, create_environment
 from aviutl2_pyrrhulina.evidence import EvidenceRecord, write_report
 from aviutl2_pyrrhulina.project import Effect, Project, TimelineObject
 from aviutl2_pyrrhulina.runner import AviUtl2Error, RenderResult, render
+from aviutl2_pyrrhulina.thumbnail import ThumbnailSizeWarning, make_thumbnail
 
 __all__ = [
     "AviUtl2Error",
@@ -20,10 +21,12 @@ __all__ = [
     "ImageMismatch",
     "Project",
     "RenderResult",
+    "ThumbnailSizeWarning",
     "TimelineObject",
     "assert_images_match",
     "compare_images",
     "create_environment",
+    "make_thumbnail",
     "render",
     "write_report",
 ]
