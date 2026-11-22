@@ -19,6 +19,7 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <exception>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -149,8 +150,9 @@ void on_rendered(void* param, int, const void* buffer, int width, int height, in
 
 std::string run_render(const std::vector<std::string>& args) {
 	if (args.size() != 3) return "error\tbad arguments";
+	int frame = std::stoi(args[1]);  // 数字でなければ例外になる（worker が捕まえる）
 	auto* request = new RenderRequest;
-	request->frame = std::stoi(args[1]);
+	request->frame = frame;
 	request->out_path = widen(args[2]);
 	request->done = CreateEventW(nullptr, TRUE, FALSE, nullptr);
 	CallResult requested = on_main_thread([](void* param) {
@@ -175,6 +177,26 @@ std::string run_render(const std::vector<std::string>& args) {
 	return result;
 }
 
+std::string run_command(const std::vector<std::string>& args) {
+	if (args[0] == "timeout" && args.size() == 2) {
+		g_deadline = GetTickCount64() + std::stoul(args[1]);
+		return "ok";
+	}
+	// 時間切れになった描画がまだ動いているので、続けて実行しても別の理由で失敗するだけになる。
+	if (remaining_ms() == 0) return "error\tskipped because the time limit was reached";
+	if (args[0] == "project") return run_project(args);
+	if (args[0] == "render") return run_render(args);
+	return "error\tunknown command";
+}
+
+// 結果ファイルは 1 行 1 結果、項目はタブ区切りなので、例外の説明から改行とタブを除く。
+std::string single_line(std::string text) {
+	for (char& c : text) {
+		if (c == '\r' || c == '\n' || c == '\t') c = ' ';
+	}
+	return text;
+}
+
 DWORD WINAPI worker(void*) {
 	std::vector<std::string> results;
 	std::ifstream job(g_job_path.c_str());
@@ -184,15 +206,14 @@ DWORD WINAPI worker(void*) {
 		if (line.empty()) continue;
 		auto args = split_tabs(line);
 		log_info(widen(line));
-		if (args[0] == "timeout" && args.size() == 2) {
-			g_deadline = GetTickCount64() + std::stoul(args[1]);
-			results.push_back("ok");
-		} else if (remaining_ms() == 0) {
-			// 時間切れになった描画がまだ動いているので、続けて実行しても別の理由で失敗するだけになる。
-			results.push_back("error\tskipped because the time limit was reached");
-		} else if (args[0] == "project") results.push_back(run_project(args));
-		else if (args[0] == "render") results.push_back(run_render(args));
-		else results.push_back("error\tunknown command");
+		// ワーカースレッドで例外を捕まえないと std::terminate になり、AviUtl2 ごと落ちる。
+		try {
+			results.push_back(run_command(args));
+		} catch (const std::exception& error) {
+			results.push_back("error\texception: " + single_line(error.what()));
+		} catch (...) {
+			results.push_back("error\tunknown exception");
+		}
 	}
 
 	// 書きかけの結果を読まれないよう、別名で書いてから改名する。

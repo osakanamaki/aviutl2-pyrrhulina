@@ -1,9 +1,13 @@
+import os
+import subprocess
 from pathlib import Path
 
 import pytest
 
 from aviutl2_pyrrhulina import AviUtl2Error, Effect, Project, TimelineObject
+from aviutl2_pyrrhulina.environment import Environment
 from aviutl2_pyrrhulina.pytest_plugin import AviUtl2
+from aviutl2_pyrrhulina.runner import JOB_ENV_VAR
 
 BASELINES = Path(__file__).parent / "baselines"
 
@@ -65,3 +69,45 @@ def test_known_log_error_can_be_ignored(aviutl2: AviUtl2) -> None:
 def test_ignoring_one_error_does_not_hide_others(aviutl2: AviUtl2) -> None:
     with pytest.raises(AviUtl2Error, match="script exception"):
         aviutl2.render(_project("broken"), [0], ignore_log_errors=["ImageService::canLoadFile"])
+
+
+def test_image_is_not_flipped(aviutl2: AviUtl2) -> None:
+    result = aviutl2.render(_project("corner"), [0])
+
+    # 中央（160, 120）から左に 100、上に 80 ずれた、40×40 の四角形。
+    assert result.images[0].getbbox() == (40, 20, 80, 60)
+
+
+def test_one_frame_object_can_be_rendered(aviutl2: AviUtl2) -> None:
+    square = TimelineObject(0, 0, 0, [Effect("square", {"サイズ": "100.00"}), Effect("標準描画")])
+
+    result = aviutl2.render(Project(320, 240, [square]), [0])
+
+    assert result.images[0].getbbox() == (110, 70, 210, 170)
+
+
+# aviutl2 fixture を使わないので、マーカーは自動では付かない。
+@pytest.mark.aviutl2
+def test_plugin_reports_exception_instead_of_crashing(
+    aviutl2_environment: Environment, tmp_path: Path
+) -> None:
+    # Python 側の render() は正しい命令しか作らないので、ジョブファイルを直接書く。
+    project_path = tmp_path / "project.aup2"
+    _project("square").write(project_path)
+    job_path = tmp_path / "job.txt"
+    job_path.write_text(
+        f"timeout\t20000\nproject\t{project_path}\nrender\tnot-a-number\t{tmp_path / 'frame.rgba'}\n",
+        encoding="utf-8",
+    )
+
+    process = subprocess.run(
+        [str(aviutl2_environment.exe), str(project_path)],
+        cwd=aviutl2_environment.root,
+        env={**os.environ, JOB_ENV_VAR: str(job_path)},
+        timeout=60,
+    )
+
+    results = Path(f"{job_path}.result").read_text(encoding="utf-8").splitlines()
+    assert results[:2] == ["ok", "ok"]
+    assert results[2].startswith("error\texception: ")
+    assert process.returncode == 0

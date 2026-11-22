@@ -27,7 +27,10 @@ class TimelineObject:
     midpoints: Sequence[int] = ()
 
     def __post_init__(self) -> None:
-        if self.frames != sorted(set(self.frames)):
+        # 1 フレームだけのオブジェクトは 開始 == 終了（AviUtl2 では frame=0,0 と書く）。
+        if self.start > self.end:
+            raise ValueError(f"開始が終了より後になっています: {self.start},{self.end}")
+        if self.midpoints and self.frames != sorted(set(self.frames)):
             raise ValueError(f"開始 < 中間点 < 終了 の順になっていません: {self.frames}")
 
     @property
