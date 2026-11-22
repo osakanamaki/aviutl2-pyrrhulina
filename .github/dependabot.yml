@@ -1,0 +1,14 @@
+# AviUtl2 のプラグイン SDK（plugin/sdk）のミラーは、公式の更新からほぼ即時に更新される。
+# これを AviUtl2 の更新の合図として、submodule を更新する pull request を作る。
+version: 2
+updates:
+  - package-ecosystem: gitsubmodule
+    directory: /
+    schedule:
+      interval: daily
+
+  # Actions の更新（Node のバージョン対応など）も追いかける。
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

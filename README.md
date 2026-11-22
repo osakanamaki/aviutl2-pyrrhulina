@@ -1,6 +1,8 @@
 # 🐠ピルリナ（aviutl2-pyrrhulina）
 
-<!-- 対応状況のバッジ（#3 で追加予定） -->
+[![CI](https://img.shields.io/github/actions/workflow/status/osakanamaki/aviutl2-pyrrhulina/ci.yml?branch=main&label=CI)](https://github.com/osakanamaki/aviutl2-pyrrhulina/actions/workflows/ci.yml)
+[![検証済みのAviUtl2](https://img.shields.io/badge/AviUtl2-2.1.17-blue)](https://spring-fragrance.mints.ne.jp/aviutl/)
+[![SDK](https://img.shields.io/badge/SDK-2026%2F11%2F14-blue)](https://github.com/aviutl2/aviutl2_sdk_mirror)
 
 pytestを用いてAviUtl2のスクリプトを実際に動かし、描画結果とログを検証するためのツールです。
 
@@ -48,7 +50,7 @@ flowchart LR
 ## 前提
 
 - Windows
-- AviUtl2 2.1.17
+- AviUtl2 2.1.17 以上（検証済みのバージョンは上のバッジに示します）
 - Python 3.12 以上
 - 検証のたびに、実際にAviUtl2のウィンドウが一瞬表示されます。画面のない環境では動きません。
 - テストの並列実行（pytest-xdist）には対応していません。

@@ -1,0 +1,44 @@
+# push と pull request のたびに、検証用プラグインのビルド・静的検査・AviUtl2 を起動しないテストを実行する。
+# SDK の更新（Dependabot の pull request）で、使っているヘッダの破壊的変更をここで見つける。
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+
+      - name: g++（MinGW-w64）を入れる
+        id: msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          install: mingw-w64-ucrt-x86_64-gcc
+
+      - name: g++ を PATH に追加する
+        run: echo '${{ steps.msys2.outputs.msys2-location }}\ucrt64\bin' >> "$GITHUB_PATH"
+
+      - uses: astral-sh/setup-uv@v7
+
+      - run: uv sync
+
+      - name: プラグインをビルドする
+        run: uv run task build
+
+      # AviUtl2 は入っていないので、起動しないテストだけ実行する。
+      - run: uv run task check
+      - run: uv run task test

@@ -46,4 +46,33 @@ GitHub Actionsがプラグインをビルドし、wheelとプラグインをRele
 
 ## AviUtl2 / SDK の更新への追従
 
-（#3 で追加予定）
+AviUtl2は頻繁に更新されます。`plugin/sdk`（submodule）の元の [aviutl2_sdk_mirror](https://github.com/aviutl2/aviutl2_sdk_mirror) は公式の更新からほぼ即時に更新されるので、これを更新の合図にします。
+
+- 対応バージョンは、READMEのバッジ（検証済みのAviUtl2・SDKの日付）にだけ書きます。コードには持たせません。
+- 対応バージョンを書き換えるだけならリリースしません。wheelの中身が変わったときだけリリースします。
+
+### 更新が来たときの手順
+
+1. Dependabot が submodule を更新する pull request を作ります。CI（`.github/workflows/ci.yml`）がビルドを確かめます（使っているヘッダ `plugin2.h` / `logger2.h` の破壊的変更はここで見つかります）。
+2. 手元のAviUtl2本体を更新し、`uv run task test:e2e` を実行します。
+3. 通ったら、同じ pull request でREADMEのバッジ（AviUtl2のバージョン・SDKの日付）を書き換えてマージします。SDKの日付は `plugin/sdk/CHANGELOG.md` の先頭の日付です。
+4. `plugin/agent.cpp` かPython側を直したときだけ、パッチリリースします。
+
+| SDK の変更 | 対応 |
+|---|---|
+| 使っていないヘッダのみ（auf2 など） | マージのみ |
+| 使っているヘッダへの追加のみ | マージのみ（新機能を使うなら別途対応） |
+| 使っているヘッダの破壊的変更 | `agent.cpp` を修正してパッチリリース |
+
+SDKが変わらなくても、本体の挙動（ログの形式・ini・描画）は変わりうるので、e2eは毎回実行します。
+本体だけが更新されてSDKが変わらない回は、Dependabotは反応しません。
+
+### 最低バージョン
+
+最低バージョンは、e2eで実際に確かめた一番古いバージョン（2.1.17）です。理屈で下限を探らず、使うAPIを増やしたときだけ上げます。
+
+- `plugin/agent.cpp` の `kRequiredVersion` が返す値です。本体が満たさないと、AviUtl2がプラグインを読み込みません。
+- 本体のバージョン番号は `obj.getinfo("version")` と同じ形式で、2.1.17 は `2011700` です（実測）。
+- 本体が満たさないとき、AviUtl2は「version not supported」のダイアログを出して止まります。ピルリナは時間切れで止め、ログからこれを見つけて「AviUtl2 本体が古い」と報告します。
+- 上げるときは、`src/aviutl2_pyrrhulina/runner.py` の `MINIMUM_AVIUTL2_VERSION` とREADMEの「前提」も合わせます（`tests/test_runner.py` が食い違いを見つけます）。
+- 起動した本体のバージョン番号は、AviUtl2のログ（証跡の `aviutl2.log`）に `host version 2011700` の形で出ます。
