@@ -17,6 +17,11 @@ JOB_ENV_VAR = "AVIUTL2_PYRRHULINA_JOB"
 # こちらが先に AviUtl2 を止めると、どの手順で止まったかが分からなくなるため。
 _PLUGIN_MARGIN_SECONDS = 5
 
+# 検証用プラグインが求める一番古い本体（plugin/agent.cpp の kRequiredVersion と合わせる）。
+MINIMUM_AVIUTL2_VERSION = "2.1.17"
+# 本体が RequiredVersion を満たさないとき、AviUtl2 がログに出す文言。
+_VERSION_NOT_SUPPORTED = "version not supported"
+
 
 class AviUtl2Error(Exception):
     pass
@@ -103,6 +108,13 @@ def render(
         errors = ["AviUtl2 が結果を書かずに終了しました（異常終了の可能性）"]
     if timed_out:
         errors.append(f"AviUtl2 が {timeout} 秒以内に終了しなかったので、強制終了しました")
+    if _VERSION_NOT_SUPPORTED in log:
+        # 本体が古いと、AviUtl2 はダイアログを出して止まり、時間切れになる。原因が分かるよう先頭に出す。
+        errors.insert(
+            0,
+            "AviUtl2 本体が古いため、検証用プラグインが読み込まれませんでした。"
+            f"AviUtl2 を {MINIMUM_AVIUTL2_VERSION} 以上に更新してください",
+        )
     if not new_logs:
         # ログが無いと、ログのエラー検出が何も見つけられずに素通りしてしまう。
         errors.append(f"AviUtl2 のログファイルが新しく作られませんでした: {environment.log_dir}")

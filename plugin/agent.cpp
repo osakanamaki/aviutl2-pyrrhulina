@@ -33,11 +33,16 @@
 namespace {
 
 constexpr DWORD kDefaultTimeoutMs = 60000;
+// 動くことを e2e で確かめた一番古い本体のバージョン（2.1.17）。使う API を増やしたときだけ上げる。
+// 形式は obj.getinfo("version") と同じ（2.1.17 なら 2011700）。
+constexpr DWORD kRequiredVersion = 2011700;
 constexpr UINT kCallMessage = WM_APP + 1;
 
 EDIT_HANDLE* g_edit = nullptr;
 LOG_HANDLE* g_logger = nullptr;
 HWND g_main_thread_window = nullptr;
+// InitializePlugin で受け取った本体のバージョン番号。証跡としてログに出す。
+DWORD g_host_version = 0;
 std::wstring g_job_path;
 // これを過ぎたら、残りの命令は待たずに失敗にする。
 ULONGLONG g_deadline = 0;
@@ -236,6 +241,16 @@ EXTERN_C __declspec(dllexport) COMMON_PLUGIN_TABLE* GetCommonPluginTable(void) {
 	return &table;
 }
 
+// これより古い本体では、AviUtl2 がこのプラグインを読み込まない。
+EXTERN_C __declspec(dllexport) DWORD RequiredVersion() {
+	return kRequiredVersion;
+}
+
+EXTERN_C __declspec(dllexport) bool InitializePlugin(DWORD version) {
+	g_host_version = version;
+	return true;
+}
+
 EXTERN_C __declspec(dllexport) void InitializeLogger(LOG_HANDLE* logger) {
 	g_logger = logger;
 }
@@ -246,6 +261,7 @@ EXTERN_C __declspec(dllexport) void RegisterPlugin(HOST_APP_TABLE* host) {
 	if (length == 0 || length >= 32768) return;
 	g_job_path = job_path;
 	g_deadline = GetTickCount64() + kDefaultTimeoutMs;
+	log_info(L"host version " + std::to_wstring(g_host_version));
 
 	InitializeCriticalSection(&g_loaded_lock);
 	g_loaded_changed = CreateEventW(nullptr, TRUE, FALSE, nullptr);
