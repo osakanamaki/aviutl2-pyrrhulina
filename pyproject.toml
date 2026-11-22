@@ -1,6 +1,6 @@
 [project]
 name = "aviutl2-pyrrhulina"
-version = "0.1.1"
+version = "0.1.2"
 description = "AviUtl2 を実際に動かして、スクリプトの描画結果とログを pytest から検証する"
 readme = "README.md"
 license = "MIT"
@@ -12,6 +12,9 @@ dependencies = [
 
 [project.urls]
 Repository = "https://github.com/osakanamaki/aviutl2-pyrrhulina"
+
+[project.scripts]
+aviutl2-pyrrhulina-thumbnail = "aviutl2_pyrrhulina.thumbnail:main"
 
 [project.entry-points.pytest11]
 aviutl2_pyrrhulina = "aviutl2_pyrrhulina.pytest_plugin"

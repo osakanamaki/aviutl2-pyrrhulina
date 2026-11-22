@@ -4,7 +4,7 @@ import os
 import struct
 import subprocess
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from PIL import Image
@@ -26,6 +26,8 @@ class AviUtl2Error(Exception):
 class RenderResult:
     images: dict[int, Image.Image]
     log: str
+    # 証跡として保存した各フレームの PNG。
+    image_paths: dict[int, Path] = field(default_factory=dict)
 
     def log_lines(self, containing: str) -> list[str]:
         """スクリプトの print は「[SCRIPT] [スクリプト名] 本文」の形で出る。
@@ -108,11 +110,13 @@ def render(
         raise AviUtl2Error("\n".join([*errors, f"ログ: {log_path}"]))
 
     images = {}
+    image_paths = {}
     for frame, raw_path in raw_paths.items():
         images[frame] = _read_raw_image(raw_path)
-        images[frame].save(raw_path.with_suffix(".png"))
+        image_paths[frame] = raw_path.with_suffix(".png")
+        images[frame].save(image_paths[frame])
         raw_path.unlink()
-    result = RenderResult(images, log)
+    result = RenderResult(images, log, image_paths)
     unexpected = [
         line for line in result.log_errors if not any(ignored in line for ignored in ignore_log_errors)
     ]

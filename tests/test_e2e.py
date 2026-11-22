@@ -3,11 +3,13 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from PIL import Image, ImageSequence
 
-from aviutl2_pyrrhulina import AviUtl2Error, Effect, Project, TimelineObject
+from aviutl2_pyrrhulina import AviUtl2Error, Effect, Project, TimelineObject, make_thumbnail
 from aviutl2_pyrrhulina.environment import Environment
 from aviutl2_pyrrhulina.pytest_plugin import AviUtl2
 from aviutl2_pyrrhulina.runner import JOB_ENV_VAR
+from aviutl2_pyrrhulina.thumbnail import main as thumbnail_main
 
 BASELINES = Path(__file__).parent / "baselines"
 
@@ -111,3 +113,71 @@ def test_plugin_reports_exception_instead_of_crashing(
     assert results[:2] == ["ok", "ok"]
     assert results[2].startswith("error\texception: ")
     assert process.returncode == 0
+
+
+def test_snapshot_compares_every_frame(aviutl2: AviUtl2) -> None:
+    square = Effect("square", {"サイズ": "20.00,100.00,直線移動,0"})
+    project = Project(320, 240, [TimelineObject(0, 0, 10, [square, Effect("標準描画")])])
+
+    result = aviutl2.render(project, [0, 5, 10])
+
+    aviutl2.assert_snapshot(result)
+
+
+def test_animation_of_rendered_frames_is_left_as_evidence(aviutl2: AviUtl2) -> None:
+    aviutl2.render(_project("square"), [0, 9])
+
+    assert aviutl2.record.animation_path == aviutl2.evidence_dir / "frames.webp"
+    assert aviutl2.record.animation_path.exists()
+
+
+def _growing_square() -> Project:
+    square = Effect("square", {"サイズ": "20.00,200.00,直線移動,0"})
+    return Project(320, 240, [TimelineObject(0, 0, 29, [square, Effect("標準描画")])])
+
+
+@pytest.mark.aviutl2
+def test_thumbnail_is_made_with_aviutl2(aviutl2_environment: Environment, tmp_path: Path) -> None:
+    path = make_thumbnail(aviutl2_environment, _growing_square(), tmp_path / "thumb.webp", seconds=1, fps=15)
+
+    with Image.open(path) as saved:
+        assert saved.size == (206, 206)
+        # Iterator は同じ画像を読み進めるので、その場で四角形の範囲を取り出す。
+        boxes = [frame.convert("RGBA").getbbox() for frame in ImageSequence.Iterator(saved)]
+    assert len(boxes) == 15
+    # 四角形は 1 フレーム目が小さく、最後が大きい。
+    first, last = boxes[0], boxes[-1]
+    assert first is not None and last is not None
+    assert (first[2] - first[0]) < (last[2] - last[0])
+
+
+@pytest.mark.aviutl2
+def test_thumbnail_command_reads_project_file(
+    aviutl2_environment: Environment, tmp_path: Path, pytestconfig: pytest.Config
+) -> None:
+    project_path = tmp_path / "project.aup2"
+    _growing_square().write(project_path)
+    output = tmp_path / "thumb.gif"
+    scripts = Path(__file__).parent / "scripts"
+
+    exit_code = thumbnail_main(
+        [
+            str(project_path),
+            str(output),
+            "--app",
+            pytestconfig.getoption("--aviutl2-app"),
+            "--script",
+            f"pyrrhulina-tests={scripts}",
+            "--seconds",
+            "0.5",
+            "--background",
+            "#000000",
+            "--work-dir",
+            str(tmp_path / "work"),
+        ]
+    )
+
+    assert exit_code == 0
+    with Image.open(output) as saved:
+        assert saved.size == (206, 206)
+        assert saved.convert("RGBA").getpixel((0, 0)) == (0, 0, 0, 255)

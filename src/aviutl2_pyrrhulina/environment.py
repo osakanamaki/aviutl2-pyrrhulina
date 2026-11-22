@@ -8,6 +8,9 @@ from pathlib import Path
 
 AGENT_PLUGIN = Path(__file__).parent / "_bin" / "aviutl2_pyrrhulina.aux2"
 
+# 複製元の AviUtl2 の既定のフォルダ（インストーラーの既定のインストール先）。
+DEFAULT_APP_DIR = r"C:\Program Files\AviUtl2"
+
 _SCRIPT_SUFFIXES = {".anm2", ".obj2", ".cam2", ".scn2", ".tra2", ".mod2"}
 
 # FileLogLevel を書かないと、ログがファイルに出ない。1 は最も詳しいレベル。
