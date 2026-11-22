@@ -1,6 +1,6 @@
 [project]
 name = "aviutl2-pyrrhulina"
-version = "0.1.1"
+version = "0.1.2"
 description = "AviUtl2 を実際に動かして、スクリプトの描画結果とログを pytest から検証する"
 readme = "README.md"
 license = "MIT"
