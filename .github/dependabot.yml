@@ -7,6 +7,12 @@ updates:
     schedule:
       interval: daily
 
+  # Python の依存（pillow / pytest / xxhash / ruff / ty など）の更新を、uv.lock の更新として追いかける。
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+
   # Actions の更新（Node のバージョン対応など）も追いかける。
   - package-ecosystem: github-actions
     directory: /
