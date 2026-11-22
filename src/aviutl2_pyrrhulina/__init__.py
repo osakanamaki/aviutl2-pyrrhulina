@@ -16,7 +16,7 @@ from aviutl2_pyrrhulina.package import (
     install_package,
     load_install_steps,
 )
-from aviutl2_pyrrhulina.project import Effect, Project, TimelineObject
+from aviutl2_pyrrhulina.project import Effect, PreviewTarget, Project, TimelineObject, add_preview_capture
 from aviutl2_pyrrhulina.runner import AviUtl2Error, RenderResult, render
 from aviutl2_pyrrhulina.thumbnail import ThumbnailSizeWarning, make_thumbnail
 
@@ -32,10 +32,12 @@ __all__ = [
     "InstalledFile",
     "Package",
     "PackageError",
+    "PreviewTarget",
     "Project",
     "RenderResult",
     "ThumbnailSizeWarning",
     "TimelineObject",
+    "add_preview_capture",
     "assert_images_match",
     "compare_images",
     "create_environment",

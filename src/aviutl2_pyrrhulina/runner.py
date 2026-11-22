@@ -10,6 +10,7 @@ from pathlib import Path
 from PIL import Image
 
 from aviutl2_pyrrhulina.environment import Environment
+from aviutl2_pyrrhulina.project import PreviewTarget
 
 JOB_ENV_VAR = "AVIUTL2_PYRRHULINA_JOB"
 
@@ -55,6 +56,7 @@ def render(
     timeout: float = 60,
     allow_log_errors: bool = False,
     ignore_log_errors: Sequence[str] = (),
+    preview: PreviewTarget | None = None,
 ) -> RenderResult:
     """project_path を開いて frames を描画する。画像とログは work_dir にも残す。
 
@@ -62,6 +64,10 @@ def render(
     見落とさないよう、ログにエラーがあれば例外にする。
     起きると分かっているエラーは、その行に含まれる文字列を ignore_log_errors に渡して除外する。
     allow_log_errors=True なら、どのエラーでも例外にしない。
+
+    preview を渡すと、出力ではなくプレビューとして描画する。そのとき選択したオブジェクトでは
+    obj.getoption("gui") が true になる。project_path のプロジェクトは、
+    add_preview_capture で受け取り用のオブジェクトを足したものにしておく。
     """
     # AviUtl2 側は作業フォルダが違うので、渡すパスはすべて絶対パスにする。
     work_dir = work_dir.resolve()
@@ -75,8 +81,14 @@ def render(
     job_lines = [
         f"timeout\t{round(plugin_timeout * 1000)}",
         f"project\t{project_path}",
-        *(f"render\t{frame}\t{path}" for frame, path in raw_paths.items()),
     ]
+    if preview is None:
+        job_lines += [f"render\t{frame}\t{path}" for frame, path in raw_paths.items()]
+    else:
+        job_lines.append(f"select\t{preview.selected_layer}\t{preview.selected_frame}")
+        job_lines += [
+            f"preview\t{frame}\t{preview.marker_layer}\t{path}" for frame, path in raw_paths.items()
+        ]
     job_path.write_text("\n".join(job_lines) + "\n", encoding="utf-8")
 
     logs_before = set(environment.log_dir.glob("*.log"))

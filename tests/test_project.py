@@ -1,6 +1,7 @@
 import pytest
 
-from aviutl2_pyrrhulina import Effect, Project, TimelineObject
+from aviutl2_pyrrhulina import Effect, PreviewTarget, Project, TimelineObject, add_preview_capture
+from aviutl2_pyrrhulina.project import PREVIEW_CAPTURE_EFFECT
 
 
 def test_to_text_numbers_objects_and_effects() -> None:
@@ -59,3 +60,28 @@ def test_end_before_start_is_rejected() -> None:
 def test_midpoint_in_one_frame_object_is_rejected() -> None:
     with pytest.raises(ValueError, match="中間点"):
         TimelineObject(0, 5, 5, [Effect("図形")], midpoints=[5])
+
+
+def test_preview_capture_is_added_below_every_layer() -> None:
+    square = TimelineObject(2, 0, 9, [Effect("square"), Effect("標準描画")])
+    text = TimelineObject(0, 5, 20, [Effect("テキスト"), Effect("標準描画")])
+    project = Project(320, 240, [square, text])
+
+    captured, target = add_preview_capture(project, square)
+
+    marker, capture = captured.objects[2:]
+    assert captured.objects[:2] == [square, text]
+    assert (marker.layer, capture.layer) == (3, 4)
+    # 同じフレームを続けて描かせるとき、隣のフレームが必ずあるよう、最後より 1 フレーム長くする。
+    assert (marker.start, marker.end) == (0, 21)
+    assert (capture.start, capture.end) == (0, 21)
+    assert [effect.name for effect in capture.effects] == [PREVIEW_CAPTURE_EFFECT]
+    assert target == PreviewTarget(selected_layer=2, selected_frame=0, marker_layer=3)
+
+
+def test_preview_capture_rejects_object_not_in_project() -> None:
+    square = TimelineObject(0, 0, 9, [Effect("square"), Effect("標準描画")])
+    other = TimelineObject(1, 0, 9, [Effect("square"), Effect("標準描画")])
+
+    with pytest.raises(ValueError, match="project.objects"):
+        add_preview_capture(Project(320, 240, [square]), other)

@@ -77,6 +77,26 @@ assert result.images[0].getbbox() == (110, 70, 210, 170)  # 描かれた範囲
 assert result.images[0].getpixel((160, 120)) == (40, 140, 210, 255)
 ```
 
+### 選択中のオブジェクトとして描画する（`obj.getoption("gui")`）
+
+`render` は、動画の出力と同じ扱いで描画します。そのため、スクリプトの `obj.getoption("gui")` は常に `false` です。
+
+`gui` が `true` になるのは、AviUtl2でそのオブジェクトを**選択していて**（オブジェクト設定ウィンドウに表示されていて）、**プレビューとして**描かれるときです。
+選択中だけ補助線や案内を出すスクリプトは、`selected` に選択するオブジェクトを渡して確かめます。
+
+```python
+guide = TimelineObject(0, 0, 9, [Effect("my-object"), Effect("標準描画")])
+project = Project(640, 360, [guide])
+
+selected = aviutl2.render(project, frames=[0], selected=guide)  # guide の gui が true
+output = aviutl2.render(project, frames=[0])  # 出力と同じ（gui は false）
+```
+
+- `selected` には、`project` の `objects` に含まれるオブジェクトを渡します。`gui` が `true` になるのはそのオブジェクトだけです。
+- プレビューの画像を受け取るため、ピルリナはプロジェクトの一番下に、目印の小さな図形とフィルタオブジェクト（`pyrrhulina capture`）を足します。どちらも描画結果には写りません。証跡の `project.aup2` には、足したあとのプロジェクトが残ります。
+- 足したオブジェクトは、シーンの最後より1フレーム長くなります。シーンの長さを読むスクリプトでは、そのぶん値が変わります。
+- `gui` を使わないスクリプトなら、描画結果は `selected` を渡さないときと同じです（半透明の部分は、変換の丸めで1違うことがあります）。
+
 ## ログを検査する
 
 スクリプトの `print` は、ログに「`[SCRIPT] [スクリプト名] 本文`」の形で出ます。
