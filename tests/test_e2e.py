@@ -111,3 +111,12 @@ def test_plugin_reports_exception_instead_of_crashing(
     assert results[:2] == ["ok", "ok"]
     assert results[2].startswith("error\texception: ")
     assert process.returncode == 0
+
+
+def test_snapshot_compares_every_frame(aviutl2: AviUtl2) -> None:
+    square = Effect("square", {"サイズ": "20.00,100.00,直線移動,0"})
+    project = Project(320, 240, [TimelineObject(0, 0, 10, [square, Effect("標準描画")])])
+
+    result = aviutl2.render(project, [0, 5, 10])
+
+    aviutl2.assert_snapshot(result)

@@ -11,7 +11,7 @@ import os
 import re
 import shutil
 from collections.abc import Generator, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import pytest
@@ -93,6 +93,10 @@ class AviUtl2:
     evidence_dir: Path
     update_baselines: bool
     record: EvidenceRecord
+    # assert_snapshot の基準画像を置くフォルダ（このテスト専用）。
+    snapshot_dir: Path
+    # このテストで assert_snapshot に使った name。同じ基準画像を取り違えないようにするため。
+    _snapshot_names: set[str] = field(default_factory=set)
 
     def render(
         self,
@@ -133,6 +137,45 @@ class AviUtl2:
             raise ImageMismatch(comparison.describe(), [comparison])
         return comparison
 
+    def assert_snapshot(
+        self, result: RenderResult, *, name: str = "", tolerance: int = 0
+    ) -> list[ImageComparison]:
+        """描画した全フレームを、テスト名から決まる基準画像と比べる。
+
+        基準画像は <snapshot_dir>/frame_00005.png（name を付けたときは <snapshot_dir>/<name>/ の下）。
+        1 つのテストで複数回描画したときは、name を付けて区別する。
+        一致しないフレームがあっても途中で止めず、全フレームを比べてからまとめて報告する。
+        """
+        if name != _safe_name(name):
+            raise ValueError(f"name にファイル名に使えない文字が含まれています: {name!r}")
+        if name in self._snapshot_names:
+            label = f"name={name!r} の" if name else "name を付けない"
+            raise ValueError(
+                f"このテストで {label} assert_snapshot が 2 回呼ばれました。name で区別してください"
+            )
+        self._snapshot_names.add(name)
+
+        baseline_dir = self.snapshot_dir / name if name else self.snapshot_dir
+        evidence_dir = self.evidence_dir / "snapshot" / name if name else self.evidence_dir / "snapshot"
+        comparisons = []
+        for frame, image in sorted(result.images.items()):
+            comparison = compare_images(
+                image,
+                baseline_dir / f"frame_{frame:05d}.png",
+                evidence_dir,
+                tolerance=tolerance,
+                update=self.update_baselines,
+            )
+            # 一致しなくても一覧に載せられるよう、例外にする前に記録する。
+            self.record.comparisons.append(comparison)
+            comparisons.append(comparison)
+
+        failures = [comparison for comparison in comparisons if not comparison.passed]
+        if failures:
+            summary = f"{len(comparisons)} フレーム中 {len(failures)} フレームが基準画像と一致しません"
+            raise ImageMismatch("\n".join([summary, *(failure.describe() for failure in failures)]), failures)
+        return comparisons
+
 
 @pytest.fixture(scope="session")
 def aviutl2_scripts() -> Mapping[str, Path]:
@@ -148,14 +191,36 @@ def aviutl2_environment(pytestconfig: pytest.Config, aviutl2_scripts: Mapping[st
     return create_environment(pytestconfig.rootpath / _WORK_DIR_NAME / "app", app_dir, aviutl2_scripts)
 
 
+def _safe_name(text: str) -> str:
+    """ファイル名に使えない文字を _ に置き換える。"""
+    return re.sub(r'[<>:"/\\|?*\[\]]+', "_", text)
+
+
 @pytest.fixture
-def aviutl2(request: pytest.FixtureRequest, aviutl2_environment: Environment) -> AviUtl2:
-    test_name = re.sub(r'[<>:"/\\|?*\[\]]+', "_", request.node.nodeid)
+def aviutl2_baselines(request: pytest.FixtureRequest) -> Path:
+    """assert_snapshot の基準画像を置くフォルダ。既定はテストファイルと同じ場所の baselines。
+
+    この下に <テストファイル名>/<テスト名>/ を作って基準画像を置く。
+    """
+    return request.path.parent / "baselines"
+
+
+@pytest.fixture
+def aviutl2(
+    request: pytest.FixtureRequest, aviutl2_environment: Environment, aviutl2_baselines: Path
+) -> AviUtl2:
+    test_name = _safe_name(request.node.nodeid)
     evidence_dir = request.config.rootpath / _WORK_DIR_NAME / "evidence" / test_name
     # 前回の失敗で残った画像を、今回の結果と取り違えないようにする。
     shutil.rmtree(evidence_dir, ignore_errors=True)
     record = EvidenceRecord(request.node.nodeid, evidence_dir)
     request.node.stash[_RECORD_KEY] = record
+    # テスト名にはパラメータ化の [...] も含める。
+    snapshot_dir = aviutl2_baselines / request.path.stem / _safe_name(request.node.name)
     return AviUtl2(
-        aviutl2_environment, evidence_dir, request.config.getoption("--aviutl2-update-baselines"), record
+        aviutl2_environment,
+        evidence_dir,
+        request.config.getoption("--aviutl2-update-baselines"),
+        record,
+        snapshot_dir,
     )

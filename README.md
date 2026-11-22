@@ -101,6 +101,32 @@ def test_draws_bar(aviutl2):
 - 透明な部分は市松模様で表示されます。
 - 載るのは今回実行したテストだけです。`-k` などで実行しなかったテストの古い証跡は載りません。
 
+### 全フレームをまとめて基準画像と比べる（スナップショット）
+
+`assert_snapshot` は、描画した全フレームを、テスト名から自動で決まる基準画像と比べます。
+一度目で確かめた描画結果を正解として残し、スクリプトを変えた前後のデグレを見つけるのに使います。
+
+```python
+def test_draws_bar(aviutl2):
+    result = aviutl2.render(project, frames=[0, 5, 10])
+    aviutl2.assert_snapshot(result)  # 3フレームとも基準画像と比べる
+```
+
+- 基準画像は `<テストファイルのフォルダ>/baselines/<テストファイル名>/<テスト名>/frame_00005.png` に置かれます。場所は `aviutl2_baselines` fixture を上書きすると変えられます。
+- 一致しないフレームがあっても途中で止めず、一致しなかったフレームをまとめて報告します。
+- 1つのテストで何度も描画して比べるときは、`assert_snapshot(result, name="after_move")` のように名前を付けて区別します（`<テスト名>/after_move/` の下に置かれます）。
+- 許容値は `tolerance` で指定します（`assert_matches` と同じ）。
+- 基準画像の書き込みは `assert_matches` と同じく `--aviutl2-update-baselines` です。目で確かめたテストだけ書き込むときは、`-k` で絞ります。
+
+```shell
+pytest -k test_draws_bar --aviutl2-update-baselines
+```
+
+- テストの名前を変えたり消したりしても、古い基準画像は自動では消えません。
+- AviUtl2本体を更新すると、スクリプトを変えていなくても描画結果が変わり、一致しなくなることがあります。
+
+`assert_matches` は、比べる画像と基準画像のパスを自分で決めたいとき（特定のフレームだけ比べる、複数のテストで同じ基準画像を使うなど）に使います。
+
 ## 本ツールの開発
 
 このリポジトリ自体を編集する場合
