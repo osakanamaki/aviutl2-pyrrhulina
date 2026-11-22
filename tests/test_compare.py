@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from aviutl2_pyrrhulina import ImageMismatch, assert_images_match
+from aviutl2_pyrrhulina import ComparisonStatus, ImageMismatch, assert_images_match, compare_images
 
 
 def _image(color: tuple[int, int, int, int]) -> Image.Image:
@@ -66,3 +66,36 @@ def test_color_of_fully_transparent_pixels_is_ignored(tmp_path: Path) -> None:
     _image((0, 0, 0, 0)).save(baseline)
 
     assert_images_match(_image((255, 255, 255, 0)), baseline, tmp_path / "evidence")
+
+
+def test_match_leaves_actual_and_diff_for_review(tmp_path: Path) -> None:
+    baseline = tmp_path / "baseline.png"
+    _image((10, 20, 30, 255)).save(baseline)
+
+    comparison = assert_images_match(_image((11, 20, 30, 255)), baseline, tmp_path / "evidence", tolerance=1)
+
+    assert comparison.status == ComparisonStatus.MATCHED
+    assert comparison.max_difference == 1
+    assert comparison.actual_path == tmp_path / "evidence" / "baseline.actual.png"
+    assert comparison.actual_path.exists()
+    assert comparison.diff_path is not None and comparison.diff_path.exists()
+
+
+def test_compare_images_reports_mismatch_without_raising(tmp_path: Path) -> None:
+    baseline = tmp_path / "baseline.png"
+    _image((10, 20, 30, 255)).save(baseline)
+
+    comparison = compare_images(_image((20, 20, 30, 255)), baseline, tmp_path / "evidence")
+
+    assert comparison.status == ComparisonStatus.MISMATCHED
+    assert not comparison.passed
+    assert comparison.max_difference == 10
+
+
+def test_mismatch_exception_carries_comparison(tmp_path: Path) -> None:
+    with pytest.raises(ImageMismatch) as error:
+        assert_images_match(_image((0, 0, 0, 255)), tmp_path / "none.png", tmp_path / "evidence")
+
+    assert [comparison.status for comparison in error.value.comparisons] == [
+        ComparisonStatus.MISSING_BASELINE
+    ]
