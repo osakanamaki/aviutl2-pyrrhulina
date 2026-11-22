@@ -1,11 +1,22 @@
 import os
 import subprocess
+import zipfile
 from pathlib import Path
 
 import pytest
 from PIL import Image, ImageSequence
 
-from aviutl2_pyrrhulina import AviUtl2Error, Effect, Project, TimelineObject, make_thumbnail
+from aviutl2_pyrrhulina import (
+    AviUtl2Error,
+    Effect,
+    InstallStep,
+    Package,
+    Project,
+    TimelineObject,
+    create_environment,
+    make_thumbnail,
+    render,
+)
 from aviutl2_pyrrhulina.environment import Environment
 from aviutl2_pyrrhulina.pytest_plugin import AviUtl2
 from aviutl2_pyrrhulina.runner import JOB_ENV_VAR
@@ -181,3 +192,29 @@ def test_thumbnail_command_reads_project_file(
     with Image.open(output) as saved:
         assert saved.size == (206, 206)
         assert saved.convert("RGBA").getpixel((0, 0)) == (0, 0, 0, 255)
+
+
+@pytest.mark.aviutl2
+def test_package_is_installed_as_install_steps_say(tmp_path: Path, pytestconfig: pytest.Config) -> None:
+    archive = tmp_path / "dist" / "pkg.zip"
+    archive.parent.mkdir()
+    with zipfile.ZipFile(archive, "w") as zip_file:
+        zip_file.write(Path(__file__).parent / "scripts" / "square.obj2", "pkg/pkg-square.obj2")
+    steps = [
+        {"action": "download"},
+        {"action": "extract"},
+        {"action": "copy", "from": "{tmp}/pkg", "to": "{scriptsDir}/pkg"},
+    ]
+    package = Package(archive, [InstallStep.from_dict(step) for step in steps])
+    app_dir = Path(pytestconfig.getoption("--aviutl2-app"))
+    # 共有の検証用環境を壊さないよう、別の場所に作る。
+    environment = create_environment(tmp_path / "env" / "app", app_dir, {}, package=package)
+    square = TimelineObject(0, 0, 0, [Effect("pkg-square", {"サイズ": "100.00"}), Effect("標準描画")])
+    project_path = tmp_path / "project.aup2"
+    Project(320, 240, [square]).write(project_path)
+
+    # 信頼済みとして登録されていないと、確認ダイアログが出て時間切れになる。
+    result = render(environment, project_path, [0], tmp_path / "out", timeout=30)
+
+    assert result.images[0].getbbox() == (110, 70, 210, 170)
+    assert [file.catalog_path for file in environment.installed_files] == ["{scriptsDir}/pkg/pkg-square.obj2"]

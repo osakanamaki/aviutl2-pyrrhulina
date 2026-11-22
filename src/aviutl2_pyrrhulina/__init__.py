@@ -7,6 +7,15 @@ from aviutl2_pyrrhulina.compare import (
 )
 from aviutl2_pyrrhulina.environment import Environment, create_environment
 from aviutl2_pyrrhulina.evidence import EvidenceRecord, write_report
+from aviutl2_pyrrhulina.package import (
+    InstalledFile,
+    InstallStep,
+    Package,
+    PackageError,
+    file_hash,
+    install_package,
+    load_install_steps,
+)
 from aviutl2_pyrrhulina.project import Effect, Project, TimelineObject
 from aviutl2_pyrrhulina.runner import AviUtl2Error, RenderResult, render
 from aviutl2_pyrrhulina.thumbnail import ThumbnailSizeWarning, make_thumbnail
@@ -19,6 +28,10 @@ __all__ = [
     "EvidenceRecord",
     "ImageComparison",
     "ImageMismatch",
+    "InstallStep",
+    "InstalledFile",
+    "Package",
+    "PackageError",
     "Project",
     "RenderResult",
     "ThumbnailSizeWarning",
@@ -26,6 +39,9 @@ __all__ = [
     "assert_images_match",
     "compare_images",
     "create_environment",
+    "file_hash",
+    "install_package",
+    "load_install_steps",
     "make_thumbnail",
     "render",
     "write_report",

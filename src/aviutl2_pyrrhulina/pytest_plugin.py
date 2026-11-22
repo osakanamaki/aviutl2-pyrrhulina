@@ -7,6 +7,7 @@
         return {"my-script-dev": Path(__file__).parent.parent / "script"}
 """
 
+import json
 import os
 import re
 import shutil
@@ -21,6 +22,7 @@ from PIL import Image
 from aviutl2_pyrrhulina.compare import ImageComparison, ImageMismatch, compare_images
 from aviutl2_pyrrhulina.environment import DEFAULT_APP_DIR, Environment, create_environment
 from aviutl2_pyrrhulina.evidence import EvidenceRecord, write_frames_animation, write_report
+from aviutl2_pyrrhulina.package import InstalledFile, Package
 from aviutl2_pyrrhulina.project import Project
 from aviutl2_pyrrhulina.runner import RenderResult, render
 
@@ -30,6 +32,7 @@ _REPORT_NAME = "index.html"
 # テストごとの証跡を、pytest のテスト項目に持たせておく。一覧を作るときに集める。
 _RECORD_KEY = pytest.StashKey[EvidenceRecord]()
 _REPORT_PATH_KEY = pytest.StashKey[Path]()
+_INSTALLED_FILES_KEY = pytest.StashKey[tuple[InstalledFile, ...]]()
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -85,6 +88,12 @@ def pytest_terminal_summary(terminalreporter: pytest.TerminalReporter, config: p
     report_path = config.stash.get(_REPORT_PATH_KEY, None)
     if report_path is not None:
         terminalreporter.write_line(f"AviUtl2 の描画結果の一覧: {report_path}")
+    installed_files = config.stash.get(_INSTALLED_FILES_KEY, ())
+    if installed_files:
+        # カタログの登録フォームに書き写せるよう、カタログのデータと同じ形で出す。
+        catalog_files = [installed_file.to_catalog() for installed_file in installed_files]
+        terminalreporter.write_line("配布物から置いたファイル（カタログの version.file と同じ形）:")
+        terminalreporter.write_line(json.dumps(catalog_files, ensure_ascii=False, indent=2))
 
 
 @dataclass(frozen=True)
@@ -189,11 +198,36 @@ def aviutl2_scripts() -> Mapping[str, Path]:
 
 
 @pytest.fixture(scope="session")
-def aviutl2_environment(pytestconfig: pytest.Config, aviutl2_scripts: Mapping[str, Path]) -> Environment:
+def aviutl2_plugins() -> Sequence[Path]:
+    """Plugin フォルダに置くファイルかフォルダ（.auf2 など）。"""
+    return ()
+
+
+@pytest.fixture(scope="session")
+def aviutl2_package() -> Package | None:
+    """配布物とインストール手順。指定すると、手順どおりに置いてから検査する。"""
+    return None
+
+
+@pytest.fixture(scope="session")
+def aviutl2_environment(
+    pytestconfig: pytest.Config,
+    aviutl2_scripts: Mapping[str, Path],
+    aviutl2_plugins: Sequence[Path],
+    aviutl2_package: Package | None,
+) -> Environment:
     app_dir = Path(pytestconfig.getoption("--aviutl2-app"))
     if not (app_dir / "aviutl2.exe").exists():
         pytest.skip(f"AviUtl2 が見つかりません: {app_dir}")
-    return create_environment(pytestconfig.rootpath / _WORK_DIR_NAME / "app", app_dir, aviutl2_scripts)
+    environment = create_environment(
+        pytestconfig.rootpath / _WORK_DIR_NAME / "app",
+        app_dir,
+        aviutl2_scripts,
+        plugins=aviutl2_plugins,
+        package=aviutl2_package,
+    )
+    pytestconfig.stash[_INSTALLED_FILES_KEY] = environment.installed_files
+    return environment
 
 
 def _safe_name(text: str) -> str:

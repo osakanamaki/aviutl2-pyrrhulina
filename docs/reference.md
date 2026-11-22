@@ -28,6 +28,8 @@
 | fixture | スコープ | 説明 |
 |---|---|---|
 | `aviutl2_scripts` | session | AviUtl2の `Script` フォルダの下に置くフォルダ名と、その中身にするフォルダの辞書。既定は空 |
+| `aviutl2_plugins` | session | AviUtl2の `Plugin` フォルダに置くファイルかフォルダの並び。既定は空（[プラグインと配布物の検査](package.md)） |
+| `aviutl2_package` | session | 配布物とインストール手順（`Package`）。指定すると手順どおりに置いてから検査する。既定は `None` |
 | `aviutl2_baselines` | function | `assert_snapshot` の基準画像を置くフォルダ。既定はテストファイルと同じ場所の `baselines` |
 | `aviutl2_environment` | session | 検証用の環境（`Environment`）。テストのセッションごとに1回作り直す |
 | `aviutl2` | function | テストから使う入口（下記） |
@@ -79,6 +81,7 @@
 |---|---|
 | `AviUtl2Error` | 描画できなかったとき（時間切れ、フレームが範囲外、ログにエラーがある、など） |
 | `ImageMismatch` | 基準画像が無い、または一致しないとき（`AssertionError` の一種） |
+| `PackageError` | 配布物をインストール手順どおりに置けないとき |
 
 ## pytest を使わずに使う
 
@@ -110,6 +113,7 @@ result = render(environment, work_dir / "project.aup2", [0, 9], work_dir)
 ```text
 .aviutl2-pyrrhulina/
 ├─ app/                  検証用の環境（AviUtl2の複製）。data フォルダはセッションごとに作り直す
+├─ package-tmp/          配布物を展開する一時フォルダ（{tmp}）
 ├─ evidence/
 │  ├─ index.html         証跡の一覧
 │  └─ <テスト名>/         テストごとの証跡（テストを始めるときに消して作り直す）
@@ -122,7 +126,7 @@ result = render(environment, work_dir / "project.aup2", [0, 9], work_dir)
 ```
 
 検証用の環境では、`app/` に `data` フォルダを作ることで、AviUtl2の設定の保存先を普段の `C:\ProgramData\aviutl2` から切り替えています。
-また、配置したスクリプトを信頼済みとして登録し、初回起動時の確認ダイアログが出ないようにしています。
+また、配置したプラグインとスクリプトを信頼済みとして登録し、初回起動時の確認ダイアログが出ないようにしています。
 
 ## 困ったとき
 
@@ -150,8 +154,8 @@ AviUtl2が `C:\Program Files\AviUtl2` 以外にあります。環境変数 `AVIU
 
 ### AviUtl2のダイアログが出て止まる
 
-`aviutl2_scripts` に指定したフォルダの直下にあるスクリプトは、信頼済みとして登録されるので確認ダイアログは出ません。
-それ以外の場所に置いたファイルは登録されないため、ダイアログが出て止まることがあります。止まったときは制限時間で終了し、失敗として報告されます。
+`Plugin`・`Script` フォルダの直下と一つ下のフォルダにあるプラグインとスクリプトは、信頼済みとして登録されるので確認ダイアログは出ません。
+それより深い場所に置いたファイルは登録されないため、ダイアログが出て止まることがあります（AviUtl2もそこまでは読みません）。止まったときは制限時間で終了し、失敗として報告されます。
 
 ### `index.html` ができない
 

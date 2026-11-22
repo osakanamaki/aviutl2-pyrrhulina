@@ -26,7 +26,7 @@ uv run task setup     # cloneした直後に1回（submodule の取得と依存�
 
 | パス | 内容 |
 |---|---|
-| `src/aviutl2_pyrrhulina/` | Pythonのパッケージ（pytestプラグイン、描画、比較、証跡、サムネイル） |
+| `src/aviutl2_pyrrhulina/` | Pythonのパッケージ（pytestプラグイン、描画、比較、証跡、サムネイル、配布物の配置） |
 | `plugin/agent.cpp` | 検証用プラグイン。ジョブファイルの命令に従ってフレームを描画し、結果を書いてAviUtl2を閉じる |
 | `plugin/sdk/` | AviUtl2のプラグインSDK（submodule） |
 | `tests/` | テスト。`tests/scripts/` は検証用のスクリプト |

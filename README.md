@@ -40,6 +40,7 @@ flowchart LR
 | [描画結果とログの検査](docs/testing.md) | プロジェクトを組み立ててAviUtl2で描画し、画像とログをpytestで検査します |
 | [スナップショット](docs/testing.md#全フレームを基準画像と比べるスナップショット) | 描画した全フレームを、目で確かめて残した基準画像と比べ、デグレを見つけます |
 | [証跡の一覧](docs/testing.md#描画結果を目で確かめる) | 描画結果・基準画像との差分・アニメーションを、ブラウザでまとめて確認できます |
+| [プラグインと配布物の検査](docs/package.md) | プラグインを置いて検査したり、配布物をカタログのインストール手順どおりに置いて検査したりします。カタログに登録するハッシュ値（XXH3_128）も出せます |
 | [動くサムネイル](docs/thumbnail.md) | 描画結果から、[AviUtl2 Catalog](https://github.com/Neosku/aviutl2-catalog) 用のアニメーションWebP/GIFを作ります |
 
 使い方の細部（引数・fixture・作業フォルダ・困ったとき）は [リファレンス](docs/reference.md) にまとめています。
@@ -144,6 +145,7 @@ pytest --aviutl2-update-baselines
 | ページ | 内容 |
 |---|---|
 | [テストの書き方](docs/testing.md) | プロジェクトの組み立て、ログの検査、スナップショット、証跡の一覧 |
+| [プラグインと配布物の検査](docs/package.md) | プラグインの配置、配布物をインストール手順どおりに置いた検査、XXH3_128 |
 | [動くサムネイル](docs/thumbnail.md) | カタログ用のアニメーションWebP/GIFの作り方 |
 | [リファレンス](docs/reference.md) | API・fixture・オプションの一覧、作業フォルダ、困ったとき |
 | [開発](docs/development.md) | このリポジトリ自体の開発・ビルド・リリース |
