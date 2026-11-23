@@ -230,6 +230,7 @@ def aviutl2_environment(
     aviutl2_plugins: Sequence[Path],
     aviutl2_package: Package | None,
 ) -> Environment:
+    _fail_if_parallel(pytestconfig)
     app_dir = Path(pytestconfig.getoption("--aviutl2-app"))
     if not (app_dir / "aviutl2.exe").exists():
         pytest.skip(f"AviUtl2 が見つかりません: {app_dir}")
@@ -242,6 +243,27 @@ def aviutl2_environment(
     )
     pytestconfig.stash[_INSTALLED_FILES_KEY] = environment.installed_files
     return environment
+
+
+def _fail_if_parallel(config: pytest.Config) -> None:
+    """pytest-xdist で並列に実行しているときは、検証用の環境を作る前に失敗させる。
+
+    どのワーカーも同じ作業フォルダ（.aviutl2-pyrrhulina/app）を作り直すので、
+    並列に動かすと消し合いになり、原因の分からないエラーになる。
+    AviUtl2 を起動しないテストは並列でも動くので、止めるのはこの fixture を使うテストだけにする。
+    """
+    # xdist のワーカーでは、config に workerinput（ワーカー数などを持つ dict）が付く。
+    worker_input = getattr(config, "workerinput", None)
+    if worker_input is None:
+        return
+    # ワーカーが 1 つ（-n 1）なら、同時に動くものは無いので止めない。
+    if worker_input.get("workercount", 2) <= 1:
+        return
+    pytest.fail(
+        "AviUtl2 を起動するテストは、並列（pytest-xdist）では実行できません。"
+        "-n を付けずに実行するか、-m aviutl2 / -m 'not aviutl2' で分けて実行してください",
+        pytrace=False,
+    )
 
 
 def _safe_name(text: str) -> str:

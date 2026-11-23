@@ -54,19 +54,18 @@ flowchart LR
 - AviUtl2 2.1.17 以上（検証済みのバージョンは上のバッジに示します）
 - Python 3.12 以上
 - 検証のたびに、実際にAviUtl2のウィンドウが一瞬表示されます。画面のない環境では動きません。
-- テストの並列実行（pytest-xdist）には対応していません。
+- テストの並列実行（pytest-xdist）には対応していません。並列で実行すると、AviUtl2を起動するテストはエラーになります。
 
 ## インストール
 
-[Releases](https://github.com/osakanamaki/aviutl2-pyrrhulina/releases) の最新版から、wheel（`.whl`）のURLを使って追加します。
-`{バージョン}` は Releases の最新版の番号（例: `0.1.2`）に置き換えます。
+[Releases](https://github.com/osakanamaki/aviutl2-pyrrhulina/releases/latest) の最新版の Assets にある wheel（`.whl`）のリンクをコピーし、そのURLを使って追加します。
 
 ```shell
 # uv の場合
-uv add --dev https://github.com/osakanamaki/aviutl2-pyrrhulina/releases/download/v{バージョン}/aviutl2_pyrrhulina-{バージョン}-py3-none-any.whl
+uv add --dev {wheel の URL}
 
 # pip の場合
-pip install https://github.com/osakanamaki/aviutl2-pyrrhulina/releases/download/v{バージョン}/aviutl2_pyrrhulina-{バージョン}-py3-none-any.whl
+pip install {wheel の URL}
 ```
 
 Gitで管理している場合は、作業フォルダを `.gitignore` に追加します。
