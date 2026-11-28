@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 400" width="880" height="400" role="img" aria-labelledby="title desc">
+  <title id="title">🐠ピルリナの構成図</title>
+  <desc id="desc">利用者が用意したAviUtl2スクリプト・テストコード・基準画像をpytestで実行すると、ピルリナが検証専用環境でAviUtl2を起動・描画し、返ってきた画像とログを基準画像と比較して証跡として保存する。証跡は証跡の一覧（index.html）にまとめられ、利用者はそれを目で確認して基準画像を更新する。</desc>
+
+  <!--
+    ダーク用。ライト用の overview-light.svg とは <style> の色だけが異なる。
+    図を変えるときは両方を同じように直すこと（tests/test_readme.py が食い違いを見つける）。
+  -->
+  <style>
+    text { font-family: "Segoe UI", "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", Meiryo, sans-serif, "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji"; fill: #e6edf3; }
+    .group { fill: #151b23; stroke: #3d444d; stroke-width: 1.5; }
+    .group-title { font-size: 14px; font-weight: bold; text-anchor: middle; }
+    .box { fill: #0d1117; stroke: #656c76; stroke-width: 1.5; }
+    .box-main { fill: #0c2d6b; stroke: #4493f8; stroke-width: 2; }
+    .name { font-size: 14px; text-anchor: middle; }
+    .note { font-size: 12px; text-anchor: middle; fill: #9198a1; }
+    .edge { fill: none; stroke: #9198a1; stroke-width: 1.5; marker-end: url(#arrow); }
+    .edge-look { stroke-dasharray: 6 4; }
+    .arrow-head { fill: #9198a1; }
+    .label { font-size: 12px; fill: #9198a1; }
+  </style>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path class="arrow-head" d="M 0 0 L 10 5 L 0 10 z"/>
+    </marker>
+  </defs>
+
+  <!-- 利用者が用意するもの -->
+  <g id="user">
+    <rect class="group" x="16" y="16" width="240" height="304" rx="12"/>
+    <text class="group-title" x="136" y="42">利用者が用意するもの</text>
+
+    <g id="script">
+      <rect class="box" x="36" y="60" width="200" height="60" rx="8"/>
+      <text class="name" x="136" y="86">AviUtl2スクリプト</text>
+      <text class="note" x="136" y="106">（テスト対象）</text>
+    </g>
+    <g id="test-code">
+      <rect class="box" x="36" y="148" width="200" height="60" rx="8"/>
+      <text class="name" x="136" y="174">テストコード</text>
+      <text class="note" x="136" y="194">（conftest.py / test_*.py）</text>
+    </g>
+    <g id="baseline">
+      <rect class="box" x="36" y="236" width="200" height="60" rx="8"/>
+      <text class="name" x="136" y="262">基準画像</text>
+      <text class="note" x="136" y="282">（baselines/）</text>
+    </g>
+  </g>
+
+  <!-- テスト実行・描画 -->
+  <g id="runner">
+    <rect class="group" x="320" y="16" width="240" height="304" rx="12"/>
+    <text class="group-title" x="440" y="42">テスト実行・描画</text>
+
+    <g id="pytest">
+      <rect class="box" x="380" y="60" width="120" height="44" rx="22"/>
+      <text class="name" x="440" y="87">pytest</text>
+    </g>
+    <g id="pyrrhulina">
+      <rect class="box-main" x="340" y="148" width="200" height="60" rx="8"/>
+      <text class="name" x="440" y="174">🐠ピルリナ</text>
+      <text class="note" x="440" y="194">（検証専用環境）</text>
+    </g>
+    <g id="aviutl2">
+      <rect class="box" x="380" y="252" width="120" height="44" rx="8"/>
+      <text class="name" x="440" y="279">AviUtl2</text>
+    </g>
+  </g>
+
+  <!-- 出力・結果 -->
+  <g id="output">
+    <rect class="group" x="624" y="16" width="240" height="304" rx="12"/>
+    <text class="group-title" x="744" y="42">出力・結果</text>
+
+    <g id="evidence">
+      <rect class="box" x="634" y="148" width="220" height="60" rx="8"/>
+      <text class="name" x="744" y="174">証跡</text>
+      <text class="note" x="744" y="194">（描画したフレーム・ログ・差分）</text>
+    </g>
+    <g id="report">
+      <rect class="box" x="654" y="244" width="180" height="52" rx="8"/>
+      <text class="name" x="744" y="266">証跡の一覧</text>
+      <text class="note" x="744" y="286">（index.html）</text>
+    </g>
+  </g>
+
+  <!-- 矢印（実線は処理の流れ、破線は人が目で確認する流れ） -->
+  <g id="edges">
+    <g id="edge-run">
+      <path class="edge" d="M 256 82 L 380 82"/>
+      <text class="label" x="288" y="74" text-anchor="middle">実行</text>
+    </g>
+    <g id="edge-call">
+      <path class="edge" d="M 440 104 L 440 148"/>
+      <text class="label" x="448" y="130">呼出</text>
+    </g>
+    <g id="edge-launch">
+      <path class="edge" d="M 420 208 L 420 252"/>
+      <text class="label" x="412" y="234" text-anchor="end">起動・描画</text>
+    </g>
+    <g id="edge-output">
+      <path class="edge" d="M 460 252 L 460 208"/>
+      <text class="label" x="468" y="234">画像・ログ</text>
+    </g>
+    <g id="edge-compare">
+      <path class="edge" d="M 540 178 L 634 178"/>
+      <text class="label" x="592" y="154" text-anchor="middle">基準画像と</text>
+      <text class="label" x="592" y="170" text-anchor="middle">比較・保存</text>
+    </g>
+    <g id="edge-summarize">
+      <path class="edge" d="M 744 208 L 744 244"/>
+      <text class="label" x="752" y="230">まとめる</text>
+    </g>
+    <g id="edge-look">
+      <path class="edge edge-look" d="M 744 296 L 744 360 L 136 360 L 136 320"/>
+      <text class="label" x="440" y="384" text-anchor="middle">目で確認して基準画像を更新</text>
+    </g>
+  </g>
+</svg>

@@ -8,32 +8,10 @@ pytestを用いてAviUtl2のスクリプトを実際に動かし、描画結果�
 
 検証専用の環境を作成します。普段使っているAviUtl2の設定やプロジェクトには触れません。
 
-```mermaid
-flowchart LR
-    subgraph User["利用者が用意するもの"]
-        direction TB
-        Script["AviUtl2スクリプト<br/>(テスト対象)"] ~~~ TestCode["テストコード<br/>(conftest.py / test_*.py)"] ~~~ Baseline["基準画像<br/>(baselines/)"]
-    end
-
-    subgraph Runner["テスト実行・描画"]
-        Pytest(["pytest"])
-        Pyrrhulina["🐠ピルリナ<br/>(検証専用環境)"]
-        AviUtl2["AviUtl2"]
-    end
-
-    subgraph Output["出力・結果"]
-        Result["証跡<br/>（描画したフレーム・ログ・差分）"]
-        Report["証跡の一覧<br/>（index.html）"]
-    end
-
-    User -- 実行 --> Pytest
-    Pytest -- 呼出 --> Pyrrhulina
-    Pyrrhulina -- 起動・描画 --> AviUtl2
-    AviUtl2 -- 画像・ログ --> Pyrrhulina
-    Pyrrhulina -- 基準画像と比較・保存 --> Result
-    Result -- まとめる --> Report
-    Report -. 目で確認して<br/>基準画像を更新 .-> User
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/osakanamaki/aviutl2-pyrrhulina/v0.2.2/docs/images/overview-dark.svg">
+  <img src="https://raw.githubusercontent.com/osakanamaki/aviutl2-pyrrhulina/v0.2.2/docs/images/overview-light.svg" alt="構成図: 利用者が用意したスクリプト・テストコード・基準画像をpytestで実行すると、ピルリナが検証専用環境でAviUtl2を起動・描画し、画像とログを基準画像と比較して証跡として保存する。証跡の一覧（index.html）を目で確認して基準画像を更新する" width="880">
+</picture>
 
 ## できること
 

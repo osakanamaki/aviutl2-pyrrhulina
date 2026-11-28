@@ -44,6 +44,8 @@ git push origin v{バージョン}
 GitHub Actionsがプラグインをビルドし、wheelとプラグインをReleasesに置きます（`.github/workflows/release.yml`）。
 タグと `version` が一致しないときは失敗します。
 
+READMEの構成図（`docs/images/overview-*.svg`）は、PyPIでも表示されるようにタグ付きの絶対URLで参照しています。`version` を上げたらURLのタグも合わせます（`tests/test_readme.py` が食い違いを見つけます）。
+
 ## AviUtl2 / SDK の更新への追従
 
 AviUtl2は頻繁に更新されます。`plugin/sdk`（submodule）の元の [aviutl2_sdk_mirror](https://github.com/aviutl2/aviutl2_sdk_mirror) は公式の更新からほぼ即時に更新されるので、これを更新の合図にします。
