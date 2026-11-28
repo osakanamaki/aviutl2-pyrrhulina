@@ -9,8 +9,8 @@ pytestを用いてAviUtl2のスクリプトを実際に動かし、描画結果�
 検証専用の環境を作成します。普段使っているAviUtl2の設定やプロジェクトには触れません。
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/osakanamaki/aviutl2-pyrrhulina/v0.2.2/docs/images/overview-dark.svg">
-  <img src="https://raw.githubusercontent.com/osakanamaki/aviutl2-pyrrhulina/v0.2.2/docs/images/overview-light.svg" alt="構成図: 利用者が用意したスクリプト・テストコード・基準画像をpytestで実行すると、ピルリナが検証専用環境でAviUtl2を起動・描画し、画像とログを基準画像と比較して証跡として保存する。証跡の一覧（index.html）を目で確認して基準画像を更新する" width="880">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/osakanamaki/aviutl2-pyrrhulina/main/docs/images/overview-dark.svg">
+  <img src="https://raw.githubusercontent.com/osakanamaki/aviutl2-pyrrhulina/main/docs/images/overview-light.svg" alt="構成図: 利用者が用意したスクリプト・テストコード・基準画像をpytestで実行すると、ピルリナが検証専用環境でAviUtl2を起動・描画し、画像とログを基準画像と比較して証跡として保存する。証跡の一覧（index.html）を目で確認して基準画像を更新する" width="880">
 </picture>
 
 ## できること
