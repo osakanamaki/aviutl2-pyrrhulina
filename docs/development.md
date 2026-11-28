@@ -32,6 +32,15 @@ uv run task setup     # cloneした直後に1回（submodule の取得と依存�
 | `tests/` | テスト。`tests/scripts/` は検証用のスクリプト |
 | `docs/` | 利用者向けのドキュメント |
 
+## READMEの構成図
+
+READMEの構成図は、手書きのSVG（`docs/images/overview-light.svg` / `overview-dark.svg`）です。2つは `<style>` の色だけが異なり、図を変えるときは両方を同じように直します（`tests/test_readme.py` が食い違いを見つけます）。
+
+PyPIでは相対パスが解決されないため、READMEからは `main` を指す絶対URLで参照しています。PyPIのページは画像を閲覧のたびに読み込むので、過去のバージョンのページにも `main` の図が出ます。
+
+- ファイルを移動・改名・削除しません。過去のバージョンのPyPIページで図が表示されなくなります。
+- 過去のバージョンと食い違うほど図を作り直すときは、上書きせず別のファイル名で追加します。
+
 ## リリース
 
 `pyproject.toml` の `version` を上げてコミットし、同じ番号のタグをpushします。
